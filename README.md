@@ -11,8 +11,7 @@ Geolocation needs HTTPS. `localhost` counts as secure, so on a desktop:
     npx serve .        # or: python3 -m http.server 8080
 
 To test on a phone, use an HTTPS tunnel (`npx localtunnel --port 3000`, ngrok, or cloudflared) or deploy.
-No GPS on desktop? Tap **Simulate GPS**, pan to anywhere, then **Start hike**. A looping track replays at about 5 m/s,
-with an occasional bad fix to exercise the accuracy filter.
+No GPS on desktop? In Chrome devtools open Sensors, set a location, then use the app as normal.
 
 ## Deploy
 Static hosting only. Netlify: drag the folder into the dashboard. Vercel: `vercel --prod` from this folder (framework: Other).
@@ -26,6 +25,13 @@ The draft is saved to IndexedDB every 5 points and on page hide, and you are off
 ## Location and look
 If location is already allowed, Switchback starts tracking on launch and keeps you centered. Dragging the map pauses following; the arrow button resumes it.
 Icons are inline SF-style SVGs. Apple's SF Symbols license doesn't allow them on the web, so they can't be bundled here.
+
+## Mapbox Outdoors (optional)
+Mapbox's Outdoors style (trails, contours, hillshade) needs an access token, so it only appears when you set one.
+1. Create a Mapbox account and copy a **public** token (`pk.`). Never use a secret `sk.` token in a browser app.
+2. In the Mapbox dashboard, restrict that token to your site's URL (for example your Vercel domain).
+3. Paste it into `config.js` and redeploy. Outdoors then becomes the default layer, and the layers button cycles OSM, OpenTopoMap and Outdoors.
+Mapbox tiles are billed per request after a free monthly allowance (see mapbox.com/pricing). The service worker does not cache them, so this layer needs a connection. Check Mapbox's current attribution rules before launch.
 
 ## Tiles
 Tiles load only for the area you view, cache-first, capped at 1,500. There is no bulk prefetching. Attribution stays visible top-right.

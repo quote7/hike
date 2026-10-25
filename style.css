@@ -15,13 +15,17 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-o
 .stop{background:var(--red);color:#fff}
 .danger{background:#ff3b3020;color:var(--red)}
 .row{display:flex;gap:10px;margin-top:12px}.row>*{flex:1}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .tile{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0;border-radius:14px;background:var(--card);color:var(--blue);font-size:13px;font-weight:600}
 .tile b{font:600 20px/24px ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif}
 .tile span{color:var(--label2)}
 .tile[aria-pressed=true]{background:var(--blue);color:#fff}.tile[aria-pressed=true] span{color:#fff}
 #sheet{position:fixed;left:0;right:0;bottom:0;z-index:1000;padding:8px calc(16px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));border-radius:20px 20px 0 0;box-shadow:0 -.5px 0 var(--sep),0 -8px 30px #0003}
-#sheet::before{content:"";display:block;width:36px;height:5px;margin:0 auto 12px;border-radius:3px;background:var(--sep)}
+#grab{display:block;width:100%;height:44px;margin:-8px 0 0;padding:0;border:0;background:transparent;touch-action:none}
+#grab::before{content:"";display:block;width:36px;height:5px;margin:19px auto 0;border-radius:3px;background:var(--label2)}
+#mini{display:none;justify-content:center;gap:18px;padding:0 0 6px;font:600 20px/1.2 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+#sheet.collapsed #mini:not(:empty){display:flex}
+#sheet.collapsed #views{display:none}
 #views{max-height:62vh;overflow:auto}
 .fabs{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(100% + 12px);border-radius:14px;overflow:hidden;box-shadow:0 1px 8px #0004}
 .fab{display:grid;place-items:center;width:52px;height:52px;border:0;background:transparent;color:var(--blue)}

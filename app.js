@@ -12,7 +12,7 @@ let imp = localStorage.units === 'imp';
 const fD = m => imp ? (m / 1609.344).toFixed(2) + ' mi' : (m / 1000).toFixed(2) + ' km';
 const fE = m => imp ? Math.round(m * 3.281) + ' ft' : Math.round(m) + ' m';
 const fT = s => { s = Math.round(s); const h = s / 3600 | 0, m = s % 3600 / 60 | 0; return h ? `${h}:${p2(m)}:${p2(s % 60)}` : `${m}:${p2(s % 60)}`; };
-const fP = v => v > .3 ? fT((imp ? 1609.344 : 1000) / v) + (imp ? ' /mi' : ' /km') : 'â€“';
+const fP = v => v > .3 ? fT((imp ? 1609.344 : 1000) / v) + (imp ? ' /mi' : ' /km') : '\u2013';
 const fS = v => (v * (imp ? 2.237 : 3.6)).toFixed(1) + (imp ? ' mph' : ' km/h');
 let tt; const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3500); };
 function ask(h, p, ok, no = 'Cancel') {
@@ -26,11 +26,11 @@ function ask(h, p, ok, no = 'Cancel') {
 const map = L.map('map', {zoomControl: false, attributionControl: false, zoomAnimation: !RM, fadeAnimation: !RM, markerZoomAnimation: !RM}).setView([20, 0], 2);
 L.control.attribution({position: 'topright', prefix: '<a href="https://leafletjs.com">Leaflet</a>'}).addTo(map);
 const base = {
-  osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, crossOrigin: true, attribution: 'Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}),
-  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom: 17, crossOrigin: true, attribution: 'Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM Â· Â© <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'})
+  osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, crossOrigin: true, attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}),
+  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom: 17, crossOrigin: true, attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM \u00b7 \u00a9 <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'})
 };
 if (MAPBOX_TOKEN) base.outdoors = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
-  {tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: 'Â© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors <a href="https://www.mapbox.com/map-feedback/"><b>Improve this map</b></a>'});
+  {tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: '\u00a9 <a href="https://www.mapbox.com/about/maps/">Mapbox</a> \u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors <a href="https://www.mapbox.com/map-feedback/"><b>Improve this map</b></a>'});
 const NAMES = {osm: 'OpenStreetMap', topo: 'OpenTopoMap with contour lines', outdoors: 'Mapbox Outdoors'};
 let cur = base[localStorage.layer] ? localStorage.layer : base.outdoors ? 'outdoors' : 'osm'; base[cur].addTo(map);
 $('#layers').onclick = () => { const k = Object.keys(base); map.removeLayer(base[cur]); cur = k[(k.indexOf(cur) + 1) % k.length]; base[cur].addTo(map); localStorage.layer = cur; toast(NAMES[cur]); };
@@ -45,26 +45,26 @@ function dot(c) {
 }
 
 /* ---------- GPS ---------- */
-let wid = null, first = true, follow = true, last = null, sim = false, simT = null, rec = null, line = null, wl = null, layer = null;
+let wid = null, first = true, follow = true, last = null, rec = null, line = null, wl = null, layer = null;
 const setFollow = f => { follow = f; $('#loc').classList.toggle('on', f); $('#loc').setAttribute('aria-pressed', f); };
 map.on('dragstart', () => setFollow(false));   // dragging the map stops following; the locate button resumes
 const chip = (t, c = '') => { const e = $('#gps'); e.textContent = t; e.className = 'chip ' + c; };
-const quality = a => chip(`GPS ${a <= 15 ? 'good' : a <= 30 ? 'fair' : 'weak'}, Â±${fE(a)}`, a <= 15 ? 'ok' : a <= 30 ? 'warn' : 'bad');
+const quality = a => chip(`GPS ${a <= 15 ? 'good' : a <= 30 ? 'fair' : 'weak'}, \u00b1${fE(a)}`, a <= 15 ? 'ok' : a <= 30 ? 'warn' : 'bad');
 
 function onErr(e) {
   if (e.code === 1) {
     chip('Location blocked', 'bad');
     toast('Location is blocked. Allow it in your browser site settings, then reload.');
     if (wid != null) { navigator.geolocation.clearWatch(wid); wid = null; }
-  } else chip(e.code === 2 ? 'No GPS signal' : 'Searching for GPSâ€¦', 'warn');
+  } else chip(e.code === 2 ? 'No GPS signal' : 'Searching for GPS\u2026', 'warn');
 }
 async function ensureGeo() {
-  if (sim || wid != null) return true;
+  if (wid != null) return true;
   if (!navigator.geolocation) { chip('GPS unavailable', 'bad'); toast('This device has no geolocation support.'); return false; }
   let st; try { st = await navigator.permissions.query({name: 'geolocation'}); } catch {}
   if (st?.state === 'denied') { onErr({code: 1}); return false; }
   if (st?.state !== 'granted' && !await ask('Use your location?', 'Switchback needs GPS to show you on the map and record your path. Your location stays on this device.', 'Allow location', 'Not now')) return false;
-  chip('Searching for GPSâ€¦', 'warn');
+  chip('Searching for GPS\u2026', 'warn');
   wid = navigator.geolocation.watchPosition(onFix, onErr, {enableHighAccuracy: true, maximumAge: 0, timeout: 20000});
   return true;
 }
@@ -78,12 +78,22 @@ $('#loc').onclick = async () => { if (!await ensureGeo()) return; setFollow(true
 
 /* ---------- recording ---------- */
 const F = [['Distance', r => fD(r.dist)], ['Time', r => fT(r.elapsed / 1e3)], ['Moving time', r => fT(r.moving)], ['Pace', r => fP(r.v)],
-  ['Average pace', r => fP(r.moving ? r.dist / r.moving : 0)], ['Speed', r => fS(r.v)], ['Average speed', r => fS(r.moving ? r.dist / r.moving : 0)], ['Gain / loss', r => `+${fE(r.gain)} / âˆ’${fE(r.loss)}`]];
-$('#stats').innerHTML = F.map(([k], i) => `<div><small>${k}</small><b id="s${i}">â€“</b></div>`).join('');
-const draw = () => rec && F.forEach(([, f], i) => $('#s' + i).textContent = f(rec));
+  ['Average pace', r => fP(r.moving ? r.dist / r.moving : 0)], ['Speed', r => fS(r.v)], ['Average speed', r => fS(r.moving ? r.dist / r.moving : 0)], ['Gain / loss', r => `+${fE(r.gain)} / \u2212${fE(r.loss)}`]];
+$('#stats').innerHTML = F.map(([k], i) => `<div><small>${k}</small><b id="s${i}">\u2013</b></div>`).join('');
+const draw = () => { if (!rec) return; F.forEach(([, f], i) => $('#s' + i).textContent = f(rec)); $('#mini').innerHTML = `<span>${fD(rec.dist)}</span><span>${fT(rec.elapsed / 1e3)}</span>`; };
 const save = () => rec && db.put('draft', {...rec}, 'cur');
-const view = v => document.querySelectorAll('.view').forEach(e => e.hidden = e.id !== 'v-' + v);
+const view = v => { document.querySelectorAll('.view').forEach(e => e.hidden = e.id !== 'v-' + v); if (v !== 'rec') setCollapsed(false); };
 const pauseUI = p => { $('#pt').textContent = p ? 'Resume' : 'Pause'; $('#pi').setAttribute('href', p ? '#i-play' : '#i-pause'); };
+
+/* collapsible panel: tap or swipe the handle (keyboard: Enter/Space) */
+const sheet = $('#sheet'), grab = $('#grab');
+const setCollapsed = c => { sheet.classList.toggle('collapsed', c); grab.setAttribute('aria-expanded', !c); grab.setAttribute('aria-label', c ? 'Expand panel' : 'Collapse panel'); localStorage.collapsed = c ? '1' : '0'; };
+let gy = null;
+grab.onpointerdown = e => { gy = e.clientY; grab.setPointerCapture(e.pointerId); };
+grab.onpointerup = e => { if (gy == null) return; const dy = e.clientY - gy; gy = null; setCollapsed(Math.abs(dy) > 20 ? dy > 0 : !sheet.classList.contains('collapsed')); };
+grab.onpointercancel = () => gy = null;
+grab.onclick = e => { if (!e.detail) setCollapsed(!sheet.classList.contains('collapsed')); };
+setCollapsed(localStorage.collapsed === '1');
 
 function add(q) {
   if (q.acc > 30) return;                                   // drop poor fixes
@@ -118,7 +128,7 @@ setInterval(() => {
 function begin() {
   line?.remove(); line = L.polyline(rec.pts.map(q => [q.lat, q.lon]), {color: TRACK, weight: 6, opacity: .9}).addTo(map);
   view('rec'); pauseUI(rec.state !== 'rec');
-  if (rec.state === 'rec') { lock(); if (sim) runSim(); }
+  if (rec.state === 'rec') lock();
   save(); draw();
 }
 $('#start').onclick = async () => {
@@ -132,28 +142,10 @@ $('#pause').onclick = async () => {
 };
 $('#stop').onclick = async () => { if (await ask('Finish this hike?', 'Your track will be saved on this device.', 'Finish', 'Keep going')) finish(rec); };
 async function finish(r) {
-  clearInterval(simT); simT = null; unlock(); line?.remove(); line = null; rec = null; await db.delete('draft', 'cur');
+  unlock(); $('#mini').textContent = ''; line?.remove(); line = null; rec = null; await db.delete('draft', 'cur');
   if (r.pts.length < 2) { toast('Too short to save. Nothing was recorded.'); view('idle'); return; }
   const h = {id: r.id, name: 'Hike, ' + new Date(r.startedAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}), date: r.startedAt, pts: r.pts, dist: r.dist, gain: r.gain, loss: r.loss, moving: r.moving, elapsed: r.elapsed};
   await db.put('hikes', h); toast('Hike saved'); detail(h);
-}
-
-/* ---------- simulated GPS (desktop testing) ---------- */
-$('#sim').onclick = e => {
-  sim = !sim; $('#sim').setAttribute('aria-pressed', sim); $('#sim span').textContent = sim ? 'Simulating' : 'Simulate';
-  if (sim && wid != null) { navigator.geolocation.clearWatch(wid); wid = null; }
-  toast(sim ? 'Simulation on. Pan the map where you like, then tap Start hike.' : 'Simulation off');
-};
-function runSim() {
-  const c = map.getCenter(); let i = 0; const j = () => (Math.random() - .5) * 2e-5;
-  if (map.getZoom() < 13) map.setView(c, 15, {animate: false});
-  clearInterval(simT);
-  simT = setInterval(() => {   // ~5 m per second loop, with an occasional bad fix to exercise the filter
-    i++; const a = i * .0125, r = .004;
-    onFix({timestamp: Date.now(), coords: {
-      latitude: c.lat + r * Math.sin(a) + j(), longitude: c.lng + r * 1.4 * (Math.cos(a) - 1) / Math.cos(c.lat * Math.PI / 180) + j(),
-      altitude: 300 + 40 * Math.sin(2 * a) + (Math.random() - .5) * 4, accuracy: i % 17 ? 6 + Math.random() * 6 : 55}});
-  }, 1000);
 }
 
 /* ---------- saved hikes ---------- */
@@ -165,7 +157,7 @@ function thumb(p) {
 async function list() {
   const hs = (await db.getAll('hikes')).sort((a, b) => b.date - a.date);
   $('#items').innerHTML = hs.length ? hs.map(h => `<li><button class="item" data-id="${h.id}">${thumb(h.pts)}<span><b>${esc(h.name)}</b><br><small><span>${new Date(h.date).toLocaleDateString()}</span><span>${fD(h.dist)}</span><span>${fT(h.elapsed / 1e3)}</span><span>+${fE(h.gain)}</span></small></span></button></li>`).join('')
-    : '<li class="mute">No hikes yet. Record one, or turn on Simulate GPS to try it.</li>';
+    : '<li class="mute">No hikes yet. Tap Start hike to record your first one.</li>';
   view('list');
 }
 $('#saved').onclick = list; $('#lback').onclick = () => view('idle');
@@ -179,7 +171,7 @@ function detail(h) {
     L.circleMarker(ll.at(-1), {radius: 9, color: '#fff', fillColor: '#b3261e', fillOpacity: 1})]).addTo(map);
   map.fitBounds(ll, {paddingTopLeft: [30, 70], paddingBottomRight: [30, innerHeight * .5], animate: !RM});
   $('#v-det').innerHTML = `<label>Name<input id="nm" value="${esc(h.name)}" maxlength="80"></label>
-    <div class="grid">${[['Distance', fD(h.dist)], ['Time', fT(h.elapsed / 1e3)], ['Moving time', fT(h.moving)], ['Gain / loss', `+${fE(h.gain)} / âˆ’${fE(h.loss)}`]].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
+    <div class="grid">${[['Distance', fD(h.dist)], ['Time', fT(h.elapsed / 1e3)], ['Moving time', fT(h.moving)], ['Gain / loss', `+${fE(h.gain)} / \u2212${fE(h.loss)}`]].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
     <canvas id="cv" role="img" aria-label="Elevation profile"></canvas>
     <div class="row"><button class="btn" id="back"><svg class="i"><use href="#i-back"/></svg>Back</button><button class="btn" id="exp"><svg class="i"><use href="#i-share"/></svg>Export</button><button class="btn danger" id="del"><svg class="i"><use href="#i-trash"/></svg>Delete</button></div>`;
   profile($('#cv'), h.pts);

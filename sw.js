@@ -1,5 +1,5 @@
 // Bump V when you change any shell file so installed copies update.
-const V = 'switchback-v3', TILES = 'switchback-tiles', MAX_TILES = 1500;
+const V = 'switchback-v4', TILES = 'switchback-tiles', MAX_TILES = 1500;
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icon.svg',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
