@@ -237,7 +237,36 @@ function showImported() {
   ]).addTo(map);
   $('#route-name').textContent = imported.name;
   $('#route-distance').textContent = fD(imported.dist);
+  const saved = Boolean(imported.savedId);
+  $('#save-route').hidden = saved;
+  $('#route-menu-back').innerHTML = `<svg class="i"><use href="#i-back"/></svg>${saved ? 'Saved hikes' : 'Main menu'}`;
+  $('#route-menu-back').onclick = saved ? openSaved : openHome;
   view('gpx');
+}
+async function saveImportedRoute() {
+  if (!imported || imported.savedId) return;
+  const saveButton = $('#save-route');
+  saveButton.disabled = true;
+  const route = {
+    id: crypto.randomUUID(),
+    type: 'route',
+    name: imported.name,
+    date: Date.now(),
+    pts: imported.points,
+    segments: imported.segments,
+    dist: imported.dist,
+    gpx: imported.gpx
+  };
+  try {
+    await db.put('hikes', route);
+    imported.savedId = route.id;
+    showImported();
+    toast('Route saved for later');
+  } catch (error) {
+    saveButton.disabled = false;
+    toast('Could not save this route. Try again.');
+    console.error('Could not save the imported GPX route.', error);
+  }
 }
 function fitImportedRoute() {
   setFollow(false);
@@ -255,11 +284,13 @@ $('#gpx-file').onchange = async e => {
   if (!file) return;
   setFollow(false);
   try {
-    imported = parseGPX(await file.text(), file.name);
+    const gpx = await file.text();
+    imported = {...parseGPX(gpx, file.name), gpx};
     await openMap('gpx'); showImported(); await fitImportedRoute();
   } catch (err) { toast(err.message || 'Could not read this GPX file.'); }
 };
 $('#start-trail').onclick = () => startRecording('gpx');
+$('#save-route').onclick = saveImportedRoute;
 $('#clear-route').onclick = () => { importedLayer?.remove(); importedLayer = imported = null; setFollow(false); view('idle'); };
 
 /* ---------- recording ---------- */
@@ -281,17 +312,23 @@ async function openMap(v = 'idle') {
 }
 function openHome() {
   removeWeatherLayer();
+  importedLayer?.remove();
+  importedLayer = imported = null;
   $('#map').hidden = true; $('#sheet').hidden = true; $('#status-bar').hidden = true; $('#gps').hidden = true;
   $('#saved-screen').hidden = true; $('#settings-screen').hidden = true; $('#main-menu').hidden = false;
 }
 async function openSaved() {
+  importedLayer?.remove();
+  importedLayer = imported = null;
   layer?.remove();
   layer = null;
   openHome();
   $('#main-menu').hidden = true;
   $('#saved-screen').hidden = false;
   const hs = (await db.getAll('hikes')).sort((a, b) => b.date - a.date);
-  $('#items').innerHTML = hs.length ? hs.map(h => `<li><button class="item" data-id="${h.id}">${thumb(h.pts)}<span><b>${esc(h.name)}</b><br><small><span>${new Date(h.date).toLocaleDateString()}</span><span>${fD(h.dist)}</span><span>${fT(h.elapsed / 1e3)}</span><span>+${fE(h.gain)}</span></small></span></button></li>`).join('')
+  $('#items').innerHTML = hs.length ? hs.map(h => `<li><button class="item" data-id="${h.id}">${thumb(h.pts)}<span><b>${esc(h.name)}</b><br><small>${h.type === 'route'
+    ? `<span>GPX route</span><span>${fD(h.dist)}</span>`
+    : `<span>${new Date(h.date).toLocaleDateString()}</span><span>${fD(h.dist)}</span><span>${fT(h.elapsed / 1e3)}</span><span>+${fE(h.gain)}</span>`}</small></span></button></li>`).join('')
     : '<li class="mute">No hikes yet. Record a hike from the main menu to see it here.</li>';
 }
 $('#main-menu-back').onclick = openHome;
@@ -415,6 +452,13 @@ $('#items').onclick = async e => {
   if (!b) return;
   const hike = await db.get('hikes', b.dataset.id);
   if (!hike) { await openSaved(); return; }
+  if (hike.type === 'route') {
+    imported = {name: hike.name, segments: hike.segments, points: hike.pts, dist: hike.dist, savedId: hike.id, gpx: hike.gpx};
+    await openMap('gpx');
+    showImported();
+    await fitImportedRoute();
+    return;
+  }
   await openMap('det');
   detail(hike);
 };

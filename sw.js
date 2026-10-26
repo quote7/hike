@@ -1,5 +1,5 @@
 // Bump V when you change any shell file so installed copies update.
-const V = 'OpenTrails-v20';
+const V = 'OpenTrails-v21';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icon.svg',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
