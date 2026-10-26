@@ -201,6 +201,22 @@ function onFix(p) {
 $('#loc').onclick = async () => { if (!await ensureGeo()) return; setFollow(true); if (last) map.setView([last.coords.latitude, last.coords.longitude], Math.max(map.getZoom(), 16), {animate: !RM}); };
 
 /* ---------- GPX import ---------- */
+function routeElevationGain(segments) {
+  let gain = 0, reference = null, hasElevation = false;
+  for (const segment of segments) {
+    reference = null;
+    for (const point of segment) {
+      if (point.ele == null) continue;
+      hasElevation = true;
+      if (reference == null) reference = point.ele;
+      else if (Math.abs(point.ele - reference) >= 3) {
+        if (point.ele > reference) gain += point.ele - reference;
+        reference = point.ele;
+      }
+    }
+  }
+  return hasElevation ? gain : null;
+}
 function parseGPX(text, filename) {
   const doc = new DOMParser().parseFromString(text, 'application/xml');
   if (doc.querySelector('parsererror')) throw new Error('This file is not valid GPX.');
@@ -225,7 +241,7 @@ function parseGPX(text, filename) {
   const names = nodes('name');
   const name = names.find(n => n.textContent.trim())?.textContent.trim() || filename.replace(/\.gpx$/i, '') || 'Imported route';
   const dist = segments.reduce((sum, segment) => sum + segment.slice(1).reduce((part, point, i) => part + map.distance([segment[i].lat, segment[i].lon], [point.lat, point.lon]), 0), 0);
-  return {name, segments, points: flat, dist};
+  return {name, segments, points: flat, dist, gain: routeElevationGain(segments)};
 }
 function showImported() {
   const coords = imported.points.map(q => [q.lat, q.lon]);
@@ -237,6 +253,7 @@ function showImported() {
   ]).addTo(map);
   $('#route-name').textContent = imported.name;
   $('#route-distance').textContent = fD(imported.dist);
+  $('#route-elevation-gain').textContent = imported.gain == null ? '\u2013' : fE(imported.gain);
   const saved = Boolean(imported.savedId);
   $('#save-route').hidden = saved;
   $('#route-menu-back').innerHTML = `<svg class="i"><use href="#i-back"/></svg>${saved ? 'Saved hikes' : 'Main menu'}`;
@@ -255,6 +272,7 @@ async function saveImportedRoute() {
     pts: imported.points,
     segments: imported.segments,
     dist: imported.dist,
+    gain: imported.gain,
     gpx: imported.gpx
   };
   try {
@@ -358,7 +376,10 @@ function setUnits(value) {
   $('#units-metric').setAttribute('aria-pressed', value === 'met');
   $('#units-imperial').setAttribute('aria-pressed', value === 'imp');
   $('#units-nautical').setAttribute('aria-pressed', value === 'naut');
-  if (imported) $('#route-distance').textContent = fD(imported.dist);
+  if (imported) {
+    $('#route-distance').textContent = fD(imported.dist);
+    $('#route-elevation-gain').textContent = imported.gain == null ? '\u2013' : fE(imported.gain);
+  }
   draw();
   renderLocalWeather();
 }
@@ -453,7 +474,10 @@ $('#items').onclick = async e => {
   const hike = await db.get('hikes', b.dataset.id);
   if (!hike) { await openSaved(); return; }
   if (hike.type === 'route') {
-    imported = {name: hike.name, segments: hike.segments, points: hike.pts, dist: hike.dist, savedId: hike.id, gpx: hike.gpx};
+    imported = {
+      name: hike.name, segments: hike.segments, points: hike.pts, dist: hike.dist,
+      gain: hike.gain ?? routeElevationGain(hike.segments), savedId: hike.id, gpx: hike.gpx
+    };
     await openMap('gpx');
     showImported();
     await fitImportedRoute();
