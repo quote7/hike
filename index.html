@@ -14,8 +14,8 @@
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></symbol>
 <symbol id="i-loc" viewBox="0 0 24 24"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></symbol>
+<symbol id="i-import" viewBox="0 0 24 24"><path d="M12 15V3m0 12 4-4m-4 4-4-4"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
 <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M7.5 4.6v14.8a1 1 0 0 0 1.5.9l11.7-7.4a1 1 0 0 0 0-1.7L9 3.7a1 1 0 0 0-1.5.9Z"/></symbol>
 <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor" stroke="none"/></symbol>
 <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="3" fill="currentColor" stroke="none"/></symbol>
@@ -25,24 +25,60 @@
 <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
 </defs></svg>
 
-<div id="gps" class="chip" role="status">GPS off</div>
+<div id="gps" class="chip" role="status" hidden>GPS off</div>
 <div id="toast" role="status" hidden></div>
-<main id="map" aria-label="Map"></main>
+<input id="gpx-file" type="file" hidden>
+<main id="main-menu" class="menu-screen">
+  <div class="menu-content">
+    <h1>Switchback</h1>
+    <div class="menu-options">
+      <button id="view-map" class="btn menu-btn">View Map</button>
+      <button id="import" class="btn menu-btn"><svg class="i"><use href="#i-import"/></svg>Import Trail</button>
+      <button id="blank-hike" class="btn pri menu-btn"><svg class="i"><use href="#i-play"/></svg>Start Blank Hike</button>
+      <button id="settings-open" class="btn menu-btn">Settings</button>
+    </div>
+  </div>
+</main>
+<section id="settings-screen" class="menu-screen" hidden>
+  <div class="menu-content">
+    <h1>Settings</h1>
+    <fieldset>
+      <legend>Appearance</legend>
+      <div class="segments"><button id="theme-light" class="segment" aria-pressed="false">Light</button><button id="theme-dark" class="segment" aria-pressed="false">Dark</button></div>
+    </fieldset>
+    <fieldset>
+      <legend>Map</legend>
+      <div class="segments"><button id="mapbox-layer" class="segment" aria-pressed="false">Mapbox</button><button id="osm-layer" class="segment" aria-pressed="false">OpenStreetMap</button></div>
+    </fieldset>
+    <button id="settings-back" class="btn menu-btn"><svg class="i"><use href="#i-back"/></svg>Back</button>
+  </div>
+</section>
+<main id="map" aria-label="Map" hidden></main>
 
-<section id="sheet">
+<section id="sheet" hidden>
   <button id="grab" aria-controls="views" aria-expanded="true" aria-label="Collapse panel"></button>
   <div id="mini" aria-hidden="true"></div>
   <div class="fabs">
-    <button id="layers" class="fab" aria-label="Switch map layer"><svg class="i"><use href="#i-layers"/></svg></button>
     <button id="loc" class="fab on" aria-label="Center on me and follow" aria-pressed="true"><svg class="i"><use href="#i-loc"/></svg></button>
   </div>
   <div id="views">
     <div id="v-idle" class="view">
-      <button id="start" class="btn pri big"><svg class="i"><use href="#i-play"/></svg>Start hike</button>
+      <button id="main-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+      <h2>Map</h2>
       <div class="tiles">
         <button id="saved" class="tile"><svg class="i"><use href="#i-list"/></svg><span>Saved</span></button>
         <button id="units" class="tile" aria-label="Switch between metric and imperial units"><b id="ut">km</b><span>Units</span></button>
       </div>
+    </div>
+    <div id="v-gpx" class="view" hidden>
+      <h2 id="route-name"></h2>
+      <div class="grid">
+        <div><small>Route distance</small><b id="route-distance"></b></div>
+        <div><small>Mode</small><b id="route-mode">Overview</b></div>
+      </div>
+      <div class="row"><button id="overview" class="btn">Overview</button><button id="start-trail" class="btn pri"><svg class="i"><use href="#i-play"/></svg>Start hike</button></div>
+      <button id="clear-route" class="btn danger clear-route">Clear route</button>
+      <button id="route-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
     </div>
     <div id="v-rec" class="view" hidden>
       <div id="stats" class="grid"></div>

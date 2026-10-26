@@ -5,6 +5,9 @@ const $ = s => document.querySelector(s), p2 = n => String(n).padStart(2, '0');
 const esc = s => String(s).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 const RM = matchMedia('(prefers-reduced-motion:reduce)').matches;
 const TRACK = '#ff2d55';
+const RECORD_TRACK = '#1685ff';
+const theme = localStorage.theme || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+document.documentElement.dataset.theme = theme;
 const db = await openDB('switchback', 1, {upgrade(d) { d.createObjectStore('hikes', {keyPath: 'id'}); d.createObjectStore('draft'); }});
 let imp = localStorage.units === 'met';
 
@@ -25,15 +28,21 @@ function ask(h, p, ok, no = 'Cancel') {
 /* ---------- map ---------- */
 const map = L.map('map', {zoomControl: false, attributionControl: false, zoomAnimation: !RM, fadeAnimation: !RM, markerZoomAnimation: !RM}).setView([20, 0], 2);
 L.control.attribution({position: 'topright', prefix: '<a href="https://leafletjs.com">Leaflet</a>'}).addTo(map);
-const base = {
-  osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, crossOrigin: true, attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}),
-  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom: 17, crossOrigin: true, attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM \u00b7 \u00a9 <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'})
-};
-if (MAPBOX_TOKEN) base.outdoors = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
+const mapbox = () => L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
   {tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: '\u00a9 <a href="https://www.mapbox.com/about/maps/">Mapbox</a> \u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors <a href="https://www.mapbox.com/map-feedback/"><b>Improve this map</b></a>'});
-const NAMES = {osm: 'OpenStreetMap', topo: 'OpenTopoMap with contour lines', outdoors: 'Mapbox Outdoors'};
-let cur = base[localStorage.layer] ? localStorage.layer : base.outdoors ? 'outdoors' : 'osm'; base[cur].addTo(map);
-$('#layers').onclick = () => { const k = Object.keys(base); map.removeLayer(base[cur]); cur = k[(k.indexOf(cur) + 1) % k.length]; base[cur].addTo(map); localStorage.layer = cur; toast(NAMES[cur]); };
+const openStreetMap = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom: 19, crossOrigin: true, attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
+let mapProvider = localStorage.mapProvider === 'osm' || !MAPBOX_TOKEN ? 'osm' : 'mapbox';
+let baseLayer = (mapProvider === 'mapbox' ? mapbox() : openStreetMap()).addTo(map);
+function chooseMapProvider(provider) {
+  if (provider === 'mapbox' && !MAPBOX_TOKEN) { toast('Add a Mapbox public token to config.js first.'); return; }
+  map.removeLayer(baseLayer);
+  mapProvider = provider;
+  baseLayer = (provider === 'mapbox' ? mapbox() : openStreetMap()).addTo(map);
+  localStorage.mapProvider = provider;
+  $('#mapbox-layer').setAttribute('aria-pressed', provider === 'mapbox');
+  $('#osm-layer').setAttribute('aria-pressed', provider === 'osm');
+}
 
 let me, ring;
 function dot(c) {
@@ -45,7 +54,7 @@ function dot(c) {
 }
 
 /* ---------- GPS ---------- */
-let wid = null, first = true, follow = true, last = null, rec = null, line = null, wl = null, layer = null;
+let wid = null, first = true, follow = true, last = null, rec = null, line = null, wl = null, layer = null, imported = null, importedLayer = null;
 const setFollow = f => { follow = f; $('#loc').classList.toggle('on', f); $('#loc').setAttribute('aria-pressed', f); };
 map.on('dragstart', () => setFollow(false));   // dragging the map stops following; the locate button resumes
 const chip = (t, c = '') => { const e = $('#gps'); e.textContent = t; e.className = 'chip ' + c; };
@@ -76,6 +85,72 @@ function onFix(p) {
 }
 $('#loc').onclick = async () => { if (!await ensureGeo()) return; setFollow(true); if (last) map.setView([last.coords.latitude, last.coords.longitude], Math.max(map.getZoom(), 16), {animate: !RM}); };
 
+/* ---------- GPX import ---------- */
+function parseGPX(text, filename) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('This file is not valid GPX.');
+  const nodes = name => [...doc.getElementsByTagName('*')].filter(n => n.localName === name);
+  const points = node => [...node.children].filter(n => n.localName === 'trkpt' || n.localName === 'rtept').map(n => {
+    const latText = n.getAttribute('lat'), lonText = n.getAttribute('lon');
+    if (latText == null || lonText == null) return null;
+    const lat = Number(latText), lon = Number(lonText);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    const child = name => [...n.children].find(c => c.localName === name)?.textContent;
+    const ele = Number(child('ele')), time = Date.parse(child('time'));
+    return {lat, lon, ele: Number.isFinite(ele) ? ele : null, t: Number.isFinite(time) ? time : 0};
+  }).filter(Boolean);
+  let segments = nodes('trkseg').map(points).filter(s => s.length);
+  if (!segments.length) segments = nodes('rte').map(points).filter(s => s.length);
+  if (!segments.length) {
+    const all = points(doc);
+    if (all.length) segments = [all];
+  }
+  const flat = segments.flat();
+  if (flat.length < 2) throw new Error('At least two valid route points are required.');
+  const names = nodes('name');
+  const name = names.find(n => n.textContent.trim())?.textContent.trim() || filename.replace(/\.gpx$/i, '') || 'Imported route';
+  const dist = segments.reduce((sum, segment) => sum + segment.slice(1).reduce((part, point, i) => part + map.distance([segment[i].lat, segment[i].lon], [point.lat, point.lon]), 0), 0);
+  return {name, segments, points: flat, dist};
+}
+function showImported() {
+  const coords = imported.points.map(q => [q.lat, q.lon]);
+  importedLayer?.remove();
+  importedLayer = L.layerGroup([
+    ...imported.segments.map(segment => L.polyline(segment.map(q => [q.lat, q.lon]), {color: TRACK, weight: 6, opacity: .9})),
+    L.circleMarker(coords[0], {radius: 8, color: '#fff', fillColor: '#2e7d32', fillOpacity: 1}),
+    L.circleMarker(coords.at(-1), {radius: 8, color: '#fff', fillColor: '#b3261e', fillOpacity: 1})
+  ]).addTo(map);
+  $('#route-name').textContent = imported.name;
+  $('#route-distance').textContent = fD(imported.dist);
+  view('gpx');
+}
+async function overview() {
+  setFollow(false);
+  await openMap('gpx');
+  await fitRoute();
+  $('#route-mode').textContent = 'Overview';
+}
+function fitRoute() {
+  return new Promise(resolve => requestAnimationFrame(() => {
+    map.invalidateSize({pan: false});
+    const bottomInset = innerHeight - $('#sheet').getBoundingClientRect().top + 16;
+    map.fitBounds(importedLayer.getBounds(), {paddingTopLeft: [24, 72], paddingBottomRight: [24, bottomInset], maxZoom: 16, animate: !RM});
+    resolve();
+  }));
+}
+$('#import').onclick = () => $('#gpx-file').click();
+$('#gpx-file').onchange = async e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  try {
+    imported = parseGPX(await file.text(), file.name);
+    await openMap('gpx'); showImported(); await overview();
+  } catch (err) { toast(err.message || 'Could not read this GPX file.'); }
+};
+$('#overview').onclick = overview;
+$('#start-trail').onclick = () => startRecording('gpx');
+$('#clear-route').onclick = () => { importedLayer?.remove(); importedLayer = imported = null; setFollow(false); view('idle'); };
+
 /* ---------- recording ---------- */
 const F = [['Distance', r => fD(r.dist)], ['Time', r => fT(r.elapsed / 1e3)], ['Moving time', r => fT(r.moving)], ['Pace', r => fP(r.v)],
   ['Average pace', r => fP(r.moving ? r.dist / r.moving : 0)], ['Speed', r => fS(r.v)], ['Average speed', r => fS(r.moving ? r.dist / r.moving : 0)], ['Gain / loss', r => `+${fE(r.gain)} / \u2212${fE(r.loss)}`]];
@@ -83,6 +158,36 @@ $('#stats').innerHTML = F.map(([k], i) => `<div><small>${k}</small><b id="s${i}"
 const draw = () => { if (!rec) return; F.forEach(([, f], i) => $('#s' + i).textContent = f(rec)); $('#mini').innerHTML = `<span>${fD(rec.dist)}</span><span>${fT(rec.elapsed / 1e3)}</span>`; };
 const save = () => rec && db.put('draft', {...rec}, 'cur');
 const view = v => { document.querySelectorAll('.view').forEach(e => e.hidden = e.id !== 'v-' + v); if (v !== 'rec') setCollapsed(false); };
+async function openMap(v = 'idle') {
+  $('#main-menu').hidden = true; $('#settings-screen').hidden = true;
+  $('#map').hidden = false; $('#sheet').hidden = false; $('#gps').hidden = false;
+  view(v);
+  await new Promise(resolve => requestAnimationFrame(() => { map.invalidateSize({pan: false}); resolve(); }));
+}
+function openHome() {
+  $('#map').hidden = true; $('#sheet').hidden = true; $('#gps').hidden = true;
+  $('#settings-screen').hidden = true; $('#main-menu').hidden = false;
+}
+$('#main-menu-back').onclick = openHome;
+$('#route-menu-back').onclick = openHome;
+$('#view-map').onclick = async () => { await openMap('idle'); setFollow(false); };
+$('#blank-hike').onclick = () => startRecording('idle');
+$('#settings-open').onclick = () => { $('#main-menu').hidden = true; $('#settings-screen').hidden = false; };
+$('#settings-back').onclick = () => { $('#settings-screen').hidden = true; $('#main-menu').hidden = false; };
+function setTheme(value) {
+  document.documentElement.dataset.theme = value;
+  localStorage.theme = value;
+  $('#theme-light').setAttribute('aria-pressed', value === 'light');
+  $('#theme-dark').setAttribute('aria-pressed', value === 'dark');
+}
+$('#theme-light').onclick = () => setTheme('light');
+$('#theme-dark').onclick = () => setTheme('dark');
+$('#mapbox-layer').onclick = () => chooseMapProvider('mapbox');
+$('#osm-layer').onclick = () => chooseMapProvider('osm');
+$('#theme-light').setAttribute('aria-pressed', theme === 'light');
+$('#theme-dark').setAttribute('aria-pressed', theme === 'dark');
+$('#mapbox-layer').setAttribute('aria-pressed', mapProvider === 'mapbox');
+$('#osm-layer').setAttribute('aria-pressed', mapProvider === 'osm');
 const pauseUI = p => { $('#pt').textContent = p ? 'Resume' : 'Pause'; $('#pi').setAttribute('href', p ? '#i-play' : '#i-pause'); };
 
 /* collapsible panel: tap or swipe the handle (keyboard: Enter/Space) */
@@ -126,16 +231,18 @@ setInterval(() => {
 }, 1000);
 
 function begin() {
-  line?.remove(); line = L.polyline(rec.pts.map(q => [q.lat, q.lon]), {color: TRACK, weight: 6, opacity: .9}).addTo(map);
+  line?.remove(); line = L.polyline(rec.pts.map(q => [q.lat, q.lon]), {color: RECORD_TRACK, weight: 6, opacity: .95}).addTo(map);
   view('rec'); pauseUI(rec.state !== 'rec');
   if (rec.state === 'rec') lock();
   save(); draw();
 }
-$('#start').onclick = async () => {
+async function startRecording(viewName) {
+  await openMap(viewName);
+  setFollow(true);
   if (!await ensureGeo()) return;
   rec = {id: crypto.randomUUID(), startedAt: Date.now(), state: 'rec', pts: [], dist: 0, gain: 0, loss: 0, moving: 0, elapsed: 0, tick: Date.now(), v: 0, ref: null, sm: null};
   begin();
-};
+}
 $('#pause').onclick = async () => {
   if (rec.state === 'rec') { rec.state = 'paused'; unlock(); save(); pauseUI(true); }
   else { if (!await ensureGeo()) return; rec.state = 'rec'; rec.tick = Date.now(); lock(); pauseUI(false); }
@@ -210,11 +317,9 @@ $('#ut').textContent = imp ? 'mi' : 'km';
 $('#units').onclick = () => { imp = !imp; localStorage.units = imp ? 'imp' : 'met'; $('#ut').textContent = imp ? 'mi' : 'km'; draw(); };
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-// Location already allowed: start tracking right away and keep the map centered on you.
-navigator.permissions?.query({name: 'geolocation'}).then(s => { if (s.state === 'granted') ensureGeo(); }).catch(() => {});
-
 const d = await db.get('draft', 'cur');
 if (d?.pts.length > 1) {
+  await openMap('rec');
   if (await ask('Resume your hike?', 'Switchback found an unfinished recording from ' + new Date(d.startedAt).toLocaleString() + '.', 'Resume', 'Save it')) {
     rec = {...d, state: 'paused', tick: Date.now()}; begin(); map.fitBounds(line.getBounds(), {animate: false});
   } else await finish(d);
