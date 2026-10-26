@@ -2,13 +2,14 @@
 :root[data-theme=dark]{--bg:#000;--card:#1c1c1e;--label:#fff;--label2:#ebebf5a0;--sep:#54545899;--blue:#0a84ff;--green:#30d158;--red:#ff453a;--orange:#ff9f0a;--track:#ff375f;--mat:#1c1c1ecc;--tint:#0a84ff33;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--label);font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--label);font:17px/1.35 "Inter",sans-serif;-webkit-font-smoothing:antialiased}
 #map{position:fixed;inset:0}
+#map.leaflet-container{font-family:"Inter",sans-serif}
 #sheet,.fabs,.chip,dialog,.leaflet-control-attribution{background:var(--mat);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%)}
-h2{font:700 28px/1.15 -apple-system,"SF Pro Display",system-ui,sans-serif;letter-spacing:-.01em;margin:4px 0 12px}
+h2{font:700 28px/1.15 "Inter",sans-serif;letter-spacing:-.01em;margin:4px 0 12px}
 .menu-screen{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;overflow:auto;padding:calc(28px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));background:var(--bg)}
 .menu-content{width:min(100%,420px)}
-.menu-content h1{margin:0 0 30px;font:700 38px/1.1 -apple-system,"SF Pro Display",system-ui,sans-serif}
+.menu-content h1{margin:0 0 30px;font:700 38px/1.1 "Inter",sans-serif}
 .menu-options{display:grid;gap:12px}
 .menu-btn{width:100%;min-height:58px;border-radius:12px}
 fieldset{min-width:0;margin:0 0 28px;padding:0;border:0}
@@ -27,17 +28,18 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-o
 .stop{background:var(--red);color:#fff}
 .danger{background:#ff3b3020;color:var(--red)}
 .row{display:flex;gap:10px;margin-top:12px}.row>*{flex:1}
-.home-actions{margin-top:0}.home-actions .big{font-size:17px}.clear-route{width:100%;margin-top:10px}
+.home-actions{margin-top:0}.home-actions .big{font-size:17px}
+.route-actions{display:grid;gap:12px;margin-top:12px}.route-actions .btn{width:100%;margin:0}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .tiles .tile:only-child{grid-column:1/-1}
 .tile{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0;border-radius:14px;background:var(--card);color:var(--blue);font-size:13px;font-weight:600}
-.tile b{font:600 20px/24px ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif}
+.tile b{font:600 20px/24px "Inter",sans-serif}
 .tile span{color:var(--label2)}
 .tile[aria-pressed=true]{background:var(--blue);color:#fff}.tile[aria-pressed=true] span{color:#fff}
 #sheet{position:fixed;left:0;right:0;bottom:0;z-index:1000;padding:8px calc(16px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));border-radius:20px 20px 0 0;box-shadow:0 -.5px 0 var(--sep),0 -8px 30px #0003}
 #grab{display:block;width:100%;height:44px;margin:-8px 0 0;padding:0;border:0;background:transparent;touch-action:none}
 #grab::before{content:"";display:block;width:36px;height:5px;margin:19px auto 0;border-radius:3px;background:var(--label2)}
-#mini{display:none;justify-content:center;gap:18px;padding:0 0 6px;font:600 20px/1.2 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+#mini{display:none;justify-content:center;gap:18px;padding:0 0 6px;font:600 20px/1.2 "Inter",sans-serif;font-variant-numeric:tabular-nums}
 #sheet.collapsed #mini:not(:empty){display:flex}
 #sheet.collapsed #views{display:none}
 #views{max-height:62vh;overflow:auto}
@@ -58,7 +60,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-o
 .grid>div{padding:10px 12px;border-radius:14px;background:var(--card)}
 small,.mute{color:var(--label2);font-size:13px}
 .grid small{display:block}
-.grid b{font:600 22px/1.2 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.grid b{font:600 22px/1.2 "Inter",sans-serif;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 ul{list-style:none;margin:0 0 8px;padding:0}
 .item{display:flex;gap:12px;align-items:center;width:100%;min-height:68px;padding:8px 10px;margin-bottom:8px;border:0;border-radius:14px;background:var(--card);text-align:left}
 .item svg{width:56px;height:56px;flex:none;color:var(--track)}

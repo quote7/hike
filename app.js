@@ -1,5 +1,5 @@
 import {openDB} from 'https://cdn.jsdelivr.net/npm/idb@8.0.0/+esm';
-import {MAPBOX_TOKEN} from './config.js';
+import {MAPBOX_TOKEN, MAPTILER_STYLE_URL} from './config.js';
 
 const $ = s => document.querySelector(s), p2 = n => String(n).padStart(2, '0');
 const esc = s => String(s).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
@@ -30,8 +30,10 @@ const map = L.map('map', {zoomControl: false, attributionControl: false, zoomAni
 L.control.attribution({position: 'topright', prefix: '<a href="https://leafletjs.com">Leaflet</a>'}).addTo(map);
 const mapbox = () => L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
   {tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: '\u00a9 <a href="https://www.mapbox.com/about/maps/">Mapbox</a> \u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors <a href="https://www.mapbox.com/map-feedback/"><b>Improve this map</b></a>'});
-const openStreetMap = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {maxZoom: 19, crossOrigin: true, attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
+const openStreetMap = () => MaplibreGLLeaflet.maplibreGL({
+  style: MAPTILER_STYLE_URL,
+  attributionControl: {customAttribution: '<a href="https://www.maptiler.com/copyright/">\u00a9 MapTiler</a> <a href="https://www.openstreetmap.org/copyright">\u00a9 OpenStreetMap contributors</a>'}
+});
 let mapProvider = localStorage.mapProvider === 'osm' || !MAPBOX_TOKEN ? 'osm' : 'mapbox';
 let baseLayer = (mapProvider === 'mapbox' ? mapbox() : openStreetMap()).addTo(map);
 function chooseMapProvider(provider) {
@@ -268,7 +270,7 @@ const draw = () => { if (!rec) return; F.forEach(([, f], i) => $('#s' + i).textC
 const save = () => rec && db.put('draft', {...rec}, 'cur');
 const view = v => { document.querySelectorAll('.view').forEach(e => e.hidden = e.id !== 'v-' + v); if (v !== 'rec') setCollapsed(false); };
 async function openMap(v = 'idle') {
-  $('#main-menu').hidden = true; $('#settings-screen').hidden = true;
+  $('#main-menu').hidden = true; $('#saved-screen').hidden = true; $('#settings-screen').hidden = true;
   $('#map').hidden = false; $('#sheet').hidden = false; $('#status-bar').hidden = false; $('#gps').hidden = false;
   view(v);
   await new Promise(resolve => requestAnimationFrame(() => {
@@ -280,7 +282,17 @@ async function openMap(v = 'idle') {
 function openHome() {
   removeWeatherLayer();
   $('#map').hidden = true; $('#sheet').hidden = true; $('#status-bar').hidden = true; $('#gps').hidden = true;
-  $('#settings-screen').hidden = true; $('#main-menu').hidden = false;
+  $('#saved-screen').hidden = true; $('#settings-screen').hidden = true; $('#main-menu').hidden = false;
+}
+async function openSaved() {
+  layer?.remove();
+  layer = null;
+  openHome();
+  $('#main-menu').hidden = true;
+  $('#saved-screen').hidden = false;
+  const hs = (await db.getAll('hikes')).sort((a, b) => b.date - a.date);
+  $('#items').innerHTML = hs.length ? hs.map(h => `<li><button class="item" data-id="${h.id}">${thumb(h.pts)}<span><b>${esc(h.name)}</b><br><small><span>${new Date(h.date).toLocaleDateString()}</span><span>${fD(h.dist)}</span><span>${fT(h.elapsed / 1e3)}</span><span>+${fE(h.gain)}</span></small></span></button></li>`).join('')
+    : '<li class="mute">No hikes yet. Record a hike from the main menu to see it here.</li>';
 }
 $('#main-menu-back').onclick = openHome;
 $('#route-menu-back').onclick = openHome;
@@ -291,6 +303,8 @@ $('#view-map').onclick = async () => {
   if (last) map.setView([last.coords.latitude, last.coords.longitude], Math.max(map.getZoom(), 16), {animate: !RM});
 };
 $('#blank-hike').onclick = () => startRecording('idle');
+$('#saved-open').onclick = openSaved;
+$('#saved-back').onclick = openHome;
 $('#settings-open').onclick = () => { $('#main-menu').hidden = true; $('#settings-screen').hidden = false; };
 $('#settings-back').onclick = () => { $('#settings-screen').hidden = true; $('#main-menu').hidden = false; };
 function setTheme(value) {
@@ -396,14 +410,14 @@ function thumb(p) {
   const x0 = Math.min(...xs), y0 = Math.min(...ys), s = Math.max(Math.max(...xs) - x0, Math.max(...ys) - y0) || 1e-9;
   return `<svg viewBox="-.06 -.06 1.12 1.12" aria-hidden="true"><polyline points="${p.map((_, i) => `${((xs[i] - x0) / s).toFixed(3)},${((ys[i] - y0) / s).toFixed(3)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width=".05" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
-async function list() {
-  const hs = (await db.getAll('hikes')).sort((a, b) => b.date - a.date);
-  $('#items').innerHTML = hs.length ? hs.map(h => `<li><button class="item" data-id="${h.id}">${thumb(h.pts)}<span><b>${esc(h.name)}</b><br><small><span>${new Date(h.date).toLocaleDateString()}</span><span>${fD(h.dist)}</span><span>${fT(h.elapsed / 1e3)}</span><span>+${fE(h.gain)}</span></small></span></button></li>`).join('')
-    : '<li class="mute">No hikes yet. Tap Start hike to record your first one.</li>';
-  view('list');
-}
-$('#saved').onclick = list; $('#lback').onclick = () => view('idle');
-$('#items').onclick = async e => { const b = e.target.closest('[data-id]'); if (b) detail(await db.get('hikes', b.dataset.id)); };
+$('#items').onclick = async e => {
+  const b = e.target.closest('[data-id]');
+  if (!b) return;
+  const hike = await db.get('hikes', b.dataset.id);
+  if (!hike) { await openSaved(); return; }
+  await openMap('det');
+  detail(hike);
+};
 
 function detail(h) {
   layer?.remove(); view('det'); setFollow(false);
@@ -418,9 +432,9 @@ function detail(h) {
     <div class="row"><button class="btn" id="back"><svg class="i"><use href="#i-back"/></svg>Back</button><button class="btn" id="exp"><svg class="i"><use href="#i-share"/></svg>Export</button><button class="btn danger" id="del"><svg class="i"><use href="#i-trash"/></svg>Delete</button></div>`;
   profile($('#cv'), h.pts);
   $('#nm').onchange = async e => { h.name = e.target.value.trim() || h.name; await db.put('hikes', h); };
-  $('#back').onclick = () => { layer.remove(); list(); };
+  $('#back').onclick = openSaved;
   $('#exp').onclick = () => share(h);
-  $('#del').onclick = async () => { if (await ask('Delete this hike?', 'This cannot be undone.', 'Delete', 'Keep')) { await db.delete('hikes', h.id); layer.remove(); list(); } };
+  $('#del').onclick = async () => { if (await ask('Delete this hike?', 'This cannot be undone.', 'Delete', 'Keep')) { await db.delete('hikes', h.id); await openSaved(); } };
 }
 function profile(cv, pts) {
   const r = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight, g = cv.getContext('2d'), cs = getComputedStyle(cv);

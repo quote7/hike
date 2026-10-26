@@ -9,7 +9,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.3.0/dist/maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -48,10 +52,18 @@
       <button id="view-map" class="btn menu-btn">View Map</button>
       <button id="import" class="btn menu-btn"><svg class="i"><use href="#i-import"/></svg>Import Trail</button>
       <button id="blank-hike" class="btn pri menu-btn"><svg class="i"><use href="#i-play"/></svg>Record Hike</button>
+      <button id="saved-open" class="btn menu-btn"><svg class="i"><use href="#i-list"/></svg>Saved hikes</button>
       <button id="settings-open" class="btn menu-btn">Settings</button>
     </div>
   </div>
 </main>
+<section id="saved-screen" class="menu-screen" hidden>
+  <div class="menu-content">
+    <h1>Saved hikes</h1>
+    <ul id="items"></ul>
+    <button id="saved-back" class="btn menu-btn"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+  </div>
+</section>
 <section id="settings-screen" class="menu-screen" hidden>
   <div class="menu-content">
     <h1>Settings</h1>
@@ -84,11 +96,8 @@
   </div>
   <div id="views">
     <div id="v-idle" class="view">
-      <button id="main-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
       <h2>Map</h2>
-      <div class="tiles">
-        <button id="saved" class="tile"><svg class="i"><use href="#i-list"/></svg><span>Saved</span></button>
-      </div>
+      <button id="main-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
     </div>
     <div id="v-gpx" class="view" hidden>
       <h2 id="route-name"></h2>
@@ -96,8 +105,10 @@
         <div><small>Route distance</small><b id="route-distance"></b></div>
       </div>
       <div class="row"><button id="start-trail" class="btn pri"><svg class="i"><use href="#i-play"/></svg>Start hike</button></div>
-      <button id="clear-route" class="btn danger clear-route">Clear route</button>
-      <button id="route-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+      <div class="route-actions">
+        <button id="clear-route" class="btn danger">Clear route</button>
+        <button id="route-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+      </div>
     </div>
     <div id="v-rec" class="view" hidden>
       <div id="stats" class="grid"></div>
@@ -105,11 +116,6 @@
         <button id="pause" class="btn"><svg class="i"><use id="pi" href="#i-pause"/></svg><span id="pt">Pause</span></button>
         <button id="stop" class="btn stop"><svg class="i"><use href="#i-stop"/></svg>Stop</button>
       </div>
-    </div>
-    <div id="v-list" class="view" hidden>
-      <h2>Saved hikes</h2>
-      <ul id="items"></ul>
-      <button id="lback" class="btn"><svg class="i"><use href="#i-back"/></svg>Back</button>
     </div>
     <div id="v-det" class="view" hidden></div>
   </div>
@@ -123,6 +129,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.3.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 # Switchback
 
 Mobile-first hiking PWA. Vanilla ES modules, no build step, no backend, no accounts.
-Leaflet + Mapbox Outdoors or OpenStreetMap, IndexedDB via `idb`, service worker for the app shell.
+Leaflet + Mapbox Outdoors or a MapTiler-hosted OpenStreetMap vector style, IndexedDB via `idb`, service worker for the app shell.
 
 **Files:** `index.html` shell, `app.js` (map, recording, storage, GPX), `sw.js` (offline), `manifest.webmanifest`, `style.css`.
 
@@ -24,7 +24,7 @@ The draft is saved to IndexedDB every 5 points and on page hide, and you are off
 
 ## Location and look
 Switchback opens to a main menu. GPS is requested when you open the map or start a hike; opening the map centers it on your location. While recording, the blue line marks your travelled path; dragging the map pauses following, and the arrow button resumes it.
-Appearance, distance units (kilometers, miles, or nautical miles), map provider, and weather radar overlay choices are saved on this device in Settings. Nautical miles use knots for speed and feet for elevation. OpenStreetMap and Mapbox Outdoors are available in Settings.
+Saved hikes are available from the main menu and open on the map when selected. Appearance, distance units (kilometers, miles, or nautical miles), map provider, and weather radar overlay choices are saved on this device in Settings. Nautical miles use knots for speed and feet for elevation. The MapTiler OpenStreetMap vector style and Mapbox Outdoors are available in Settings.
 Icons are inline SF-style SVGs. Apple's SF Symbols license doesn't allow them on the web, so they can't be bundled here.
 
 ## Weather overlay
@@ -36,6 +36,9 @@ Mapbox's Outdoors style (trails, contours, hillshade) is available alongside Ope
 2. In the Mapbox dashboard, restrict that token to your site's URL (for example your Vercel domain).
 3. Paste it into `config.js` and redeploy.
 Mapbox tiles are billed per request after a free monthly allowance (see mapbox.com/pricing). The service worker does not cache them, so the map needs a connection. Check Mapbox's current attribution rules before launch.
+
+## MapTiler OpenStreetMap style
+The OpenStreetMap option uses a MapTiler-hosted vector style and requires a public MapTiler API key. Set `MAPTILER_STYLE_URL` in `config.js` to your MapTiler style URL. Restrict the key to your site's URL in the MapTiler account dashboard. MapTiler and OpenStreetMap attribution is shown on the map. The basemap needs an internet connection.
 
 ## Tiles
 Tiles load only for the area you view. There is no bulk prefetching. Attribution stays visible top-right.
