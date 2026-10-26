@@ -6,7 +6,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 const RM = matchMedia('(prefers-reduced-motion:reduce)').matches;
 const TRACK = '#ff2d55';
 const db = await openDB('switchback', 1, {upgrade(d) { d.createObjectStore('hikes', {keyPath: 'id'}); d.createObjectStore('draft'); }});
-let imp = localStorage.units === 'imp';
+let imp = localStorage.units === 'met';
 
 /* ---------- formatting ---------- */
 const fD = m => imp ? (m / 1609.344).toFixed(2) + ' mi' : (m / 1000).toFixed(2) + ' km';
