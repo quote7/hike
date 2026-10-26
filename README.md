@@ -24,7 +24,7 @@ The draft is saved to IndexedDB every 5 points and on page hide, and you are off
 
 ## Location and look
 Switchback opens to a main menu. GPS is requested only when you start a hike. While recording, the blue line marks your travelled path; dragging the map pauses following, and the arrow button resumes it.
-Appearance and map provider choices are saved on this device. OpenStreetMap and Mapbox Outdoors are available in Settings.
+Appearance, distance units (kilometers, miles, or nautical miles), and map provider choices are saved on this device in Settings. Nautical miles use knots for speed and feet for elevation. OpenStreetMap and Mapbox Outdoors are available in Settings.
 Icons are inline SF-style SVGs. Apple's SF Symbols license doesn't allow them on the web, so they can't be bundled here.
 
 ## Mapbox Outdoors

@@ -9,14 +9,14 @@ const RECORD_TRACK = '#1685ff';
 const theme = localStorage.theme || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
 document.documentElement.dataset.theme = theme;
 const db = await openDB('switchback', 1, {upgrade(d) { d.createObjectStore('hikes', {keyPath: 'id'}); d.createObjectStore('draft'); }});
-let imp = localStorage.units === 'met';
+let units = ['met', 'imp', 'naut'].includes(localStorage.units) ? localStorage.units : 'met';
 
 /* ---------- formatting ---------- */
-const fD = m => imp ? (m / 1609.344).toFixed(2) + ' mi' : (m / 1000).toFixed(2) + ' km';
-const fE = m => imp ? Math.round(m * 3.281) + ' ft' : Math.round(m) + ' m';
+const fD = m => units === 'imp' ? (m / 1609.344).toFixed(2) + ' mi' : units === 'naut' ? (m / 1852).toFixed(2) + ' nmi' : (m / 1000).toFixed(2) + ' km';
+const fE = m => units !== 'met' ? Math.round(m * 3.281) + ' ft' : Math.round(m) + ' m';
 const fT = s => { s = Math.round(s); const h = s / 3600 | 0, m = s % 3600 / 60 | 0; return h ? `${h}:${p2(m)}:${p2(s % 60)}` : `${m}:${p2(s % 60)}`; };
-const fP = v => v > .3 ? fT((imp ? 1609.344 : 1000) / v) + (imp ? ' /mi' : ' /km') : '\u2013';
-const fS = v => (v * (imp ? 2.237 : 3.6)).toFixed(1) + (imp ? ' mph' : ' km/h');
+const fP = v => v > .3 ? fT((units === 'imp' ? 1609.344 : units === 'naut' ? 1852 : 1000) / v) + (units === 'imp' ? ' /mi' : units === 'naut' ? ' /nmi' : ' /km') : '\u2013';
+const fS = v => (v * (units === 'imp' ? 2.237 : units === 'naut' ? 1.94384 : 3.6)).toFixed(1) + (units === 'imp' ? ' mph' : units === 'naut' ? ' kn' : ' km/h');
 let tt; const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3500); };
 function ask(h, p, ok, no = 'Cancel') {
   const d = $('#dlg'); d.querySelector('h2').textContent = h; d.querySelector('p').textContent = p;
@@ -72,7 +72,6 @@ async function ensureGeo() {
   if (!navigator.geolocation) { chip('GPS unavailable', 'bad'); toast('This device has no geolocation support.'); return false; }
   let st; try { st = await navigator.permissions.query({name: 'geolocation'}); } catch {}
   if (st?.state === 'denied') { onErr({code: 1}); return false; }
-  if (st?.state !== 'granted' && !await ask('Use your location?', 'Switchback needs GPS to show you on the map and record your path. Your location stays on this device.', 'Allow location', 'Not now')) return false;
   chip('Searching for GPS\u2026', 'warn');
   wid = navigator.geolocation.watchPosition(onFix, onErr, {enableHighAccuracy: true, maximumAge: 0, timeout: 20000});
   return true;
@@ -182,10 +181,25 @@ function setTheme(value) {
 }
 $('#theme-light').onclick = () => setTheme('light');
 $('#theme-dark').onclick = () => setTheme('dark');
+function setUnits(value) {
+  units = value;
+  localStorage.units = value;
+  $('#units-metric').setAttribute('aria-pressed', value === 'met');
+  $('#units-imperial').setAttribute('aria-pressed', value === 'imp');
+  $('#units-nautical').setAttribute('aria-pressed', value === 'naut');
+  if (imported) $('#route-distance').textContent = fD(imported.dist);
+  draw();
+}
+$('#units-metric').onclick = () => setUnits('met');
+$('#units-imperial').onclick = () => setUnits('imp');
+$('#units-nautical').onclick = () => setUnits('naut');
 $('#mapbox-layer').onclick = () => chooseMapProvider('mapbox');
 $('#osm-layer').onclick = () => chooseMapProvider('osm');
 $('#theme-light').setAttribute('aria-pressed', theme === 'light');
 $('#theme-dark').setAttribute('aria-pressed', theme === 'dark');
+$('#units-metric').setAttribute('aria-pressed', units === 'met');
+$('#units-imperial').setAttribute('aria-pressed', units === 'imp');
+$('#units-nautical').setAttribute('aria-pressed', units === 'naut');
 $('#mapbox-layer').setAttribute('aria-pressed', mapProvider === 'mapbox');
 $('#osm-layer').setAttribute('aria-pressed', mapProvider === 'osm');
 const pauseUI = p => { $('#pt').textContent = p ? 'Resume' : 'Pause'; $('#pi').setAttribute('href', p ? '#i-play' : '#i-pause'); };
@@ -312,9 +326,7 @@ async function share(h) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1e4);
 }
 
-/* ---------- units, service worker, crash recovery ---------- */
-$('#ut').textContent = imp ? 'mi' : 'km';
-$('#units').onclick = () => { imp = !imp; localStorage.units = imp ? 'imp' : 'met'; $('#ut').textContent = imp ? 'mi' : 'km'; draw(); };
+/* ---------- service worker, crash recovery ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
 const d = await db.get('draft', 'cur');

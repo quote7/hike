@@ -47,6 +47,10 @@
       <div class="segments"><button id="theme-light" class="segment" aria-pressed="false">Light</button><button id="theme-dark" class="segment" aria-pressed="false">Dark</button></div>
     </fieldset>
     <fieldset>
+      <legend>Distance units</legend>
+      <div id="unit-options" class="segments"><button id="units-metric" class="segment" aria-pressed="false">km</button><button id="units-imperial" class="segment" aria-pressed="false">mi</button><button id="units-nautical" class="segment" aria-pressed="false">nmi</button></div>
+    </fieldset>
+    <fieldset>
       <legend>Map</legend>
       <div class="segments"><button id="mapbox-layer" class="segment" aria-pressed="false">Mapbox</button><button id="osm-layer" class="segment" aria-pressed="false">OpenStreetMap</button></div>
     </fieldset>
@@ -67,7 +71,6 @@
       <h2>Map</h2>
       <div class="tiles">
         <button id="saved" class="tile"><svg class="i"><use href="#i-list"/></svg><span>Saved</span></button>
-        <button id="units" class="tile" aria-label="Switch between metric and imperial units"><b id="ut">km</b><span>Units</span></button>
       </div>
     </div>
     <div id="v-gpx" class="view" hidden>
