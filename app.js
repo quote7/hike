@@ -349,7 +349,7 @@ function add(q) {
   if (rec.pts.length % 5 === 0) save();
   draw();
 }
-const lock = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch { toast('Could not keep the screen on. Keep Switchback open while hiking.'); } };
+const lock = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch { toast('Could not keep the screen on. Keep OpenTrails open while hiking.'); } };
 const unlock = () => { wl?.release(); wl = null; };
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') save();
@@ -438,7 +438,7 @@ function profile(cv, pts) {
 
 /* ---------- GPX export ---------- */
 const gpx = h => `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Switchback" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${esc(h.name)}</name><time>${new Date(h.date).toISOString()}</time></metadata><trk><name>${esc(h.name)}</name><trkseg>
+<gpx version="1.1" creator="OpenTrailso" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${esc(h.name)}</name><time>${new Date(h.date).toISOString()}</time></metadata><trk><name>${esc(h.name)}</name><trkseg>
 ${h.pts.map(q => `<trkpt lat="${q.lat}" lon="${q.lon}">${q.ele != null ? `<ele>${q.ele.toFixed(1)}</ele>` : ''}<time>${new Date(q.t).toISOString()}</time></trkpt>`).join('\n')}
 </trkseg></trk></gpx>`;
 async function share(h) {
@@ -453,7 +453,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 const d = await db.get('draft', 'cur');
 if (d?.pts.length > 1) {
   await openMap('rec');
-  if (await ask('Resume your hike?', 'Switchback found an unfinished recording from ' + new Date(d.startedAt).toLocaleString() + '.', 'Resume', 'Save it')) {
+  if (await ask('Resume your hike?', 'OpenTrails found an unfinished recording from ' + new Date(d.startedAt).toLocaleString() + '.', 'Resume', 'Save it')) {
     rec = {...d, state: 'paused', tick: Date.now()}; begin(); map.fitBounds(line.getBounds(), {animate: false});
   } else await finish(d);
 } else if (d) await db.delete('draft', 'cur');
