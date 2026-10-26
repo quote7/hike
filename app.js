@@ -39,10 +39,65 @@ function chooseMapProvider(provider) {
   map.removeLayer(baseLayer);
   mapProvider = provider;
   baseLayer = (provider === 'mapbox' ? mapbox() : openStreetMap()).addTo(map);
+  weatherLayer?.bringToFront();
   localStorage.mapProvider = provider;
   $('#mapbox-layer').setAttribute('aria-pressed', provider === 'mapbox');
   $('#osm-layer').setAttribute('aria-pressed', provider === 'osm');
 }
+
+let weatherEnabled = localStorage.weatherOverlay === '1', weatherLayer = null, weatherRequest = 0;
+function removeWeatherLayer() {
+  weatherRequest++;
+  weatherLayer?.remove();
+  weatherLayer = null;
+}
+async function refreshWeatherOverlay() {
+  if (!weatherEnabled || $('#map').hidden) return;
+  const request = ++weatherRequest;
+  try {
+    const response = await fetch('https://api.rainviewer.com/public/weather-maps.json', {cache: 'no-store'});
+    if (!response.ok) throw new Error(`RainViewer returned HTTP ${response.status}.`);
+    const data = await response.json();
+    const frame = data.radar?.past?.at(-1);
+    const host = new URL(data.host);
+    if (host.protocol !== 'https:' || host.hostname !== 'tilecache.rainviewer.com' || !/^\/v2\/radar\/[a-f\d]+$/i.test(frame?.path || '')) {
+      throw new Error('RainViewer returned an invalid radar frame.');
+    }
+    if (request !== weatherRequest || !weatherEnabled || $('#map').hidden) return;
+    const nextLayer = L.tileLayer(`${host.origin}${frame.path}/512/{z}/{x}/{y}/2/1_0.png`, {
+      tileSize: 512, zoomOffset: -1, maxNativeZoom: 8, maxZoom: 19, opacity: .4,
+      attribution: '<a href="https://www.rainviewer.com/">RainViewer</a>'
+    });
+    nextLayer.once('tileerror', error => {
+      if (weatherLayer === nextLayer) {
+        toast('RainViewer precipitation tiles could not be loaded. Try again later.');
+        console.error('Could not load RainViewer precipitation tiles.', error);
+      }
+    });
+    weatherLayer?.remove();
+    weatherLayer = nextLayer.addTo(map);
+  } catch (error) {
+    if (request === weatherRequest && weatherEnabled && !$('#map').hidden) {
+      toast('Could not get RainViewer radar data. Try again later.');
+      console.error('Could not load the RainViewer radar overlay.', error);
+    }
+  }
+}
+function setWeatherEnabled(enabled) {
+  weatherEnabled = enabled;
+  localStorage.weatherOverlay = enabled ? '1' : '0';
+  $('#weather-off').setAttribute('aria-pressed', !enabled);
+  $('#weather-on').setAttribute('aria-pressed', enabled);
+  if (enabled) refreshWeatherOverlay();
+  else removeWeatherLayer();
+}
+$('#weather-off').onclick = () => setWeatherEnabled(false);
+$('#weather-on').onclick = () => setWeatherEnabled(true);
+$('#weather-off').setAttribute('aria-pressed', !weatherEnabled);
+$('#weather-on').setAttribute('aria-pressed', weatherEnabled);
+setInterval(() => {
+  if (weatherEnabled && !$('#map').hidden) refreshWeatherOverlay();
+}, 10 * 60 * 1000);
 
 let me, ring;
 function dot(c) {
@@ -59,17 +114,75 @@ const setFollow = f => { follow = f; $('#loc').classList.toggle('on', f); $('#lo
 map.on('dragstart', () => setFollow(false));   // dragging the map stops following; the locate button resumes
 const chip = (t, c = '') => { const e = $('#gps'); e.textContent = t; e.className = 'chip ' + c; };
 const quality = a => chip(`GPS ${a <= 15 ? 'good' : a <= 30 ? 'fair' : 'weak'}, \u00b1${fE(a)}`, a <= 15 ? 'ok' : a <= 30 ? 'warn' : 'bad');
+let currentConditions = null, weatherLocation = null, weatherLookupAt = 0, weatherLookup = 0;
+const weatherDescriptions = code => {
+  if (code === 0) return ['Clear', '#i-weather-sun'];
+  if (code === 1 || code === 2) return ['Partly cloudy', '#i-weather-partly'];
+  if (code === 3) return ['Overcast', '#i-weather-cloud'];
+  if (code === 45 || code === 48) return ['Fog', '#i-weather-fog'];
+  if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return ['Rain', '#i-weather-rain'];
+  if (code >= 71 && code <= 77 || code === 85 || code === 86) return ['Snow', '#i-weather-snow'];
+  if (code >= 95 && code <= 99) return ['Thunderstorm', '#i-weather-storm'];
+  return ['Conditions unavailable', '#i-weather-cloud'];
+};
+function renderLocalWeather(message = '') {
+  const text = $('#weather-text'), icon = $('#weather-icon');
+  if (!currentConditions) {
+    text.textContent = message || 'Weather unavailable';
+    icon.setAttribute('href', '#i-weather-cloud');
+    return;
+  }
+  const [condition, symbol] = weatherDescriptions(currentConditions.code);
+  const temperature = Math.round(units === 'imp' ? currentConditions.temperature * 9 / 5 + 32 : currentConditions.temperature);
+  text.textContent = `${temperature}°${units === 'imp' ? 'F' : 'C'} · ${condition}`;
+  icon.setAttribute('href', symbol);
+}
+async function refreshLocalWeather(latitude, longitude) {
+  const point = [latitude, longitude];
+  if (weatherLocation && map.distance(weatherLocation, point) < 10000 && Date.now() - weatherLookupAt < 10 * 60 * 1000) return;
+  weatherLocation = point;
+  weatherLookupAt = Date.now();
+  const request = ++weatherLookup;
+  if (!currentConditions) renderLocalWeather('Loading weather…');
+  try {
+    const params = new URLSearchParams({
+      latitude: String(latitude),
+      longitude: String(longitude),
+      current: 'temperature_2m,weather_code',
+      temperature_unit: 'celsius',
+      timezone: 'auto'
+    });
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {cache: 'no-store'});
+    if (!response.ok) throw new Error(`Open-Meteo returned HTTP ${response.status}.`);
+    const data = await response.json();
+    const temperature = data.current?.temperature_2m, code = data.current?.weather_code;
+    if (!Number.isFinite(temperature) || !Number.isInteger(code)) throw new Error('Open-Meteo returned invalid current conditions.');
+    if (request !== weatherLookup) return;
+    currentConditions = {temperature, code};
+    renderLocalWeather();
+  } catch (error) {
+    if (request === weatherLookup) {
+      currentConditions = null;
+      renderLocalWeather('Weather unavailable');
+      console.error('Could not load current local weather.', error);
+    }
+  }
+}
 
 function onErr(e) {
   if (e.code === 1) {
     chip('Location blocked', 'bad');
+    if (!currentConditions) renderLocalWeather('Weather needs GPS');
     toast('Location is blocked. Allow it in your browser site settings, then reload.');
     if (wid != null) { navigator.geolocation.clearWatch(wid); wid = null; }
-  } else chip(e.code === 2 ? 'No GPS signal' : 'Searching for GPS\u2026', 'warn');
+  } else {
+    chip(e.code === 2 ? 'No GPS signal' : 'Searching for GPS\u2026', 'warn');
+    if (!currentConditions) renderLocalWeather('Weather needs GPS');
+  }
 }
 async function ensureGeo() {
   if (wid != null) return true;
-  if (!navigator.geolocation) { chip('GPS unavailable', 'bad'); toast('This device has no geolocation support.'); return false; }
+  if (!navigator.geolocation) { chip('GPS unavailable', 'bad'); renderLocalWeather('Weather needs GPS'); toast('This device has no geolocation support.'); return false; }
   let st; try { st = await navigator.permissions.query({name: 'geolocation'}); } catch {}
   if (st?.state === 'denied') { onErr({code: 1}); return false; }
   chip('Searching for GPS\u2026', 'warn');
@@ -78,6 +191,7 @@ async function ensureGeo() {
 }
 function onFix(p) {
   const c = p.coords; last = p; quality(c.accuracy); dot(c);
+  refreshLocalWeather(c.latitude, c.longitude);
   if (follow) { const ll = [c.latitude, c.longitude]; first ? map.setView(ll, 16, {animate: false}) : map.panTo(ll, {animate: !RM, duration: .8}); }
   first = false;
   if (rec?.state === 'rec') add({lat: c.latitude, lon: c.longitude, ele: c.altitude, t: p.timestamp, acc: c.accuracy});
@@ -123,17 +237,13 @@ function showImported() {
   $('#route-distance').textContent = fD(imported.dist);
   view('gpx');
 }
-async function overview() {
+function fitImportedRoute() {
   setFollow(false);
-  await openMap('gpx');
-  await fitRoute();
-  $('#route-mode').textContent = 'Overview';
-}
-function fitRoute() {
   return new Promise(resolve => requestAnimationFrame(() => {
+    map.stop();
     map.invalidateSize({pan: false});
     const bottomInset = innerHeight - $('#sheet').getBoundingClientRect().top + 16;
-    map.fitBounds(importedLayer.getBounds(), {paddingTopLeft: [24, 72], paddingBottomRight: [24, bottomInset], maxZoom: 16, animate: !RM});
+    map.fitBounds(L.latLngBounds(imported.points.map(q => [q.lat, q.lon])), {paddingTopLeft: [24, 72], paddingBottomRight: [24, bottomInset], maxZoom: 16, animate: !RM});
     resolve();
   }));
 }
@@ -141,12 +251,12 @@ $('#import').onclick = () => $('#gpx-file').click();
 $('#gpx-file').onchange = async e => {
   const file = e.target.files[0]; e.target.value = '';
   if (!file) return;
+  setFollow(false);
   try {
     imported = parseGPX(await file.text(), file.name);
-    await openMap('gpx'); showImported(); await overview();
+    await openMap('gpx'); showImported(); await fitImportedRoute();
   } catch (err) { toast(err.message || 'Could not read this GPX file.'); }
 };
-$('#overview').onclick = overview;
 $('#start-trail').onclick = () => startRecording('gpx');
 $('#clear-route').onclick = () => { importedLayer?.remove(); importedLayer = imported = null; setFollow(false); view('idle'); };
 
@@ -159,17 +269,27 @@ const save = () => rec && db.put('draft', {...rec}, 'cur');
 const view = v => { document.querySelectorAll('.view').forEach(e => e.hidden = e.id !== 'v-' + v); if (v !== 'rec') setCollapsed(false); };
 async function openMap(v = 'idle') {
   $('#main-menu').hidden = true; $('#settings-screen').hidden = true;
-  $('#map').hidden = false; $('#sheet').hidden = false; $('#gps').hidden = false;
+  $('#map').hidden = false; $('#sheet').hidden = false; $('#status-bar').hidden = false; $('#gps').hidden = false;
   view(v);
-  await new Promise(resolve => requestAnimationFrame(() => { map.invalidateSize({pan: false}); resolve(); }));
+  await new Promise(resolve => requestAnimationFrame(() => {
+    map.invalidateSize({pan: false});
+    resolve();
+  }));
+  refreshWeatherOverlay();
 }
 function openHome() {
-  $('#map').hidden = true; $('#sheet').hidden = true; $('#gps').hidden = true;
+  removeWeatherLayer();
+  $('#map').hidden = true; $('#sheet').hidden = true; $('#status-bar').hidden = true; $('#gps').hidden = true;
   $('#settings-screen').hidden = true; $('#main-menu').hidden = false;
 }
 $('#main-menu-back').onclick = openHome;
 $('#route-menu-back').onclick = openHome;
-$('#view-map').onclick = async () => { await openMap('idle'); setFollow(false); };
+$('#view-map').onclick = async () => {
+  await openMap('idle');
+  setFollow(true);
+  if (!await ensureGeo()) return;
+  if (last) map.setView([last.coords.latitude, last.coords.longitude], Math.max(map.getZoom(), 16), {animate: !RM});
+};
 $('#blank-hike').onclick = () => startRecording('idle');
 $('#settings-open').onclick = () => { $('#main-menu').hidden = true; $('#settings-screen').hidden = false; };
 $('#settings-back').onclick = () => { $('#settings-screen').hidden = true; $('#main-menu').hidden = false; };
@@ -189,6 +309,7 @@ function setUnits(value) {
   $('#units-nautical').setAttribute('aria-pressed', value === 'naut');
   if (imported) $('#route-distance').textContent = fD(imported.dist);
   draw();
+  renderLocalWeather();
 }
 $('#units-metric').onclick = () => setUnits('met');
 $('#units-imperial').onclick = () => setUnits('imp');

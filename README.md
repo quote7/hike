@@ -23,9 +23,12 @@ Fixes worse than 30 m accuracy and moves under 5 m are dropped. Elevation is smo
 The draft is saved to IndexedDB every 5 points and on page hide, and you are offered a resume after a crash.
 
 ## Location and look
-Switchback opens to a main menu. GPS is requested only when you start a hike. While recording, the blue line marks your travelled path; dragging the map pauses following, and the arrow button resumes it.
-Appearance, distance units (kilometers, miles, or nautical miles), and map provider choices are saved on this device in Settings. Nautical miles use knots for speed and feet for elevation. OpenStreetMap and Mapbox Outdoors are available in Settings.
+Switchback opens to a main menu. GPS is requested when you open the map or start a hike; opening the map centers it on your location. While recording, the blue line marks your travelled path; dragging the map pauses following, and the arrow button resumes it.
+Appearance, distance units (kilometers, miles, or nautical miles), map provider, and weather radar overlay choices are saved on this device in Settings. Nautical miles use knots for speed and feet for elevation. OpenStreetMap and Mapbox Outdoors are available in Settings.
 Icons are inline SF-style SVGs. Apple's SF Symbols license doesn't allow them on the web, so they can't be bundled here.
+
+## Weather overlay
+Enable Weather overlay in Settings to show the latest available RainViewer radar precipitation over the map. The overlay is transparent where radar detects no precipitation and uses 20% opacity. It refreshes every 10 minutes, uses 512 px radar tiles, and requires an internet connection. RainViewer requests attribution. Its free API is for personal or educational use only; review the [RainViewer API terms](https://www.rainviewer.com/api.html) before using it for other purposes.
 
 ## Mapbox Outdoors
 Mapbox's Outdoors style (trails, contours, hillshade) is available alongside OpenStreetMap and needs an access token.
