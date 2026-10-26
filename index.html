@@ -50,7 +50,13 @@
     <h1>OpenTrails</h1>
     <div class="menu-options">
       <button id="view-map" class="btn menu-btn">View Map</button>
-      <button id="import" class="btn menu-btn"><svg class="i"><use href="#i-import"/></svg>Import Trail</button>
+      <div class="import-menu-wrap">
+        <button id="import" class="btn menu-btn" aria-controls="import-menu" aria-expanded="false"><svg class="i"><use href="#i-import"/></svg>Import Trail</button>
+        <div id="import-menu" class="import-menu" hidden>
+          <button id="upload-gpx" class="btn menu-btn">Upload GPX</button>
+          <button id="import-alltrails" class="btn menu-btn">Import AllTrails</button>
+        </div>
+      </div>
       <button id="blank-hike" class="btn pri menu-btn"><svg class="i"><use href="#i-play"/></svg>Record Hike</button>
       <button id="saved-open" class="btn menu-btn"><svg class="i"><use href="#i-list"/></svg>Saved hikes</button>
       <button id="settings-open" class="btn menu-btn">Settings</button>
@@ -127,6 +133,18 @@
   <form method="dialog">
     <h2></h2><p></p>
     <div class="row"><button class="btn" value="no">Cancel</button><button class="btn pri" value="ok">OK</button></div>
+  </form>
+</dialog>
+<dialog id="alltrails-dialog">
+  <form method="dialog">
+    <h2>Import from AllTrails</h2>
+    <p>AllTrails doesn’t provide a public API for downloading GPX from a trail link. Open the trail, download its GPX if available, then return and choose Upload GPX.</p>
+    <label for="alltrails-url">AllTrails trail link</label>
+    <input id="alltrails-url" type="url" placeholder="https://www.alltrails.com/trail/..." required>
+    <div class="row">
+      <button class="btn" value="cancel">Cancel</button>
+      <button id="alltrails-open" class="btn pri" type="button">Open trail</button>
+    </div>
   </form>
 </dialog>
 

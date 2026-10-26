@@ -296,7 +296,47 @@ function fitImportedRoute() {
     resolve();
   }));
 }
-$('#import').onclick = () => $('#gpx-file').click();
+const importButton = $('#import'), importMenu = $('#import-menu');
+function closeImportMenu() {
+  importMenu.hidden = true;
+  importButton.setAttribute('aria-expanded', 'false');
+}
+importButton.onclick = () => {
+  importMenu.hidden = !importMenu.hidden;
+  importButton.setAttribute('aria-expanded', !importMenu.hidden);
+};
+$('#upload-gpx').onclick = () => {
+  closeImportMenu();
+  $('#gpx-file').click();
+};
+$('#import-alltrails').onclick = () => {
+  closeImportMenu();
+  $('#alltrails-dialog').showModal();
+  $('#alltrails-url').focus();
+};
+$('#alltrails-open').onclick = () => {
+  const input = $('#alltrails-url');
+  if (!input.reportValidity()) return;
+  try {
+    const url = new URL(input.value);
+    if (!['alltrails.com', 'www.alltrails.com'].includes(url.hostname) || !/^\/(?:trail|explore)\//.test(url.pathname)) {
+      throw new Error('Enter a valid AllTrails trail link.');
+    }
+    window.open(url.href, '_blank', 'noopener,noreferrer');
+    $('#alltrails-dialog').close();
+  } catch (error) {
+    toast(error.message || 'Enter a valid AllTrails trail link.');
+  }
+};
+document.addEventListener('click', event => {
+  if (!event.target.closest('.import-menu-wrap')) closeImportMenu();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !importMenu.hidden) {
+    closeImportMenu();
+    importButton.focus();
+  }
+});
 $('#gpx-file').onchange = async e => {
   const file = e.target.files[0]; e.target.value = '';
   if (!file) return;

@@ -11,6 +11,10 @@ h2{font:700 28px/1.15 "Inter",sans-serif;letter-spacing:-.01em;margin:4px 0 12px
 .menu-content{width:min(100%,420px)}
 .menu-content h1{margin:0 0 30px;font:700 38px/1.1 "Inter",sans-serif}
 .menu-options{display:grid;gap:12px}
+.import-menu-wrap{position:relative}
+.import-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:1;display:grid;gap:6px;padding:8px;border:1px solid var(--sep);border-radius:14px;background:var(--card);box-shadow:0 8px 24px #0003}
+.import-menu[hidden]{display:none}
+.import-menu .menu-btn{min-height:48px}
 .menu-btn{width:100%;min-height:58px;border-radius:12px}
 fieldset{min-width:0;margin:0 0 28px;padding:0;border:0}
 legend{margin-bottom:10px;font-weight:700}

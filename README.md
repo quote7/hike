@@ -44,7 +44,7 @@ The OpenStreetMap option uses a MapTiler-hosted vector style and requires a publ
 Tiles load only for the area you view. There is no bulk prefetching. Attribution stays visible top-right.
 
 ## GPX routes
-Choose Import Trail from the main menu to load a `.gpx` route and automatically fit it on the map. The route view shows distance and cumulative elevation gain when the GPX includes elevation data. Start hike records your travelled path in blue over the imported route. Use Save for later to keep the GPX route in Saved hikes on this device; its route data and original GPX file are stored locally in IndexedDB.
+Choose Import Trail from the main menu, then Upload GPX to load a `.gpx` route and automatically fit it on the map. The route view shows distance and cumulative elevation gain when the GPX includes elevation data. Start hike records your travelled path in blue over the imported route. Use Save for later to keep the GPX route in Saved hikes on this device; its route data and original GPX file are stored locally in IndexedDB. AllTrails does not provide a public API for downloading a GPX file directly from a trail link, so Import AllTrails opens the trail page and you can upload its GPX file if available.
 
 ## Known limitations
 - Browsers pause GPS when the screen locks or the tab is hidden. Switchback holds a Screen Wake Lock while recording, so keep it open and in front.
