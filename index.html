@@ -17,29 +17,10 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-<symbol id="i-loc" viewBox="0 0 24 24"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></symbol>
-<symbol id="i-import" viewBox="0 0 24 24"><path d="M12 15V3m0 12 4-4m-4 4-4-4"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
-<symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M7.5 4.6v14.8a1 1 0 0 0 1.5.9l11.7-7.4a1 1 0 0 0 0-1.7L9 3.7a1 1 0 0 0-1.5.9Z"/></symbol>
-<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor" stroke="none"/></symbol>
-<symbol id="i-stop" viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="3" fill="currentColor" stroke="none"/></symbol>
-<symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><g fill="currentColor" stroke="none"><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></g></symbol>
-<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3.5M8 7l4-4 4 4"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16"/></symbol>
-<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 11v6M14.5 11v6M6 7l.8 11.2A2 2 0 0 0 8.8 20h6.4a2 2 0 0 0 2-1.8L18 7M9 7V4.5h6V7"/></symbol>
-<symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
-<symbol id="i-weather-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></symbol>
-<symbol id="i-weather-partly" viewBox="0 0 24 24"><path d="M12 3v2m6.36.64-1.42 1.42M21 12h-2M5 12H3m4.05-4.95L5.64 5.64"/><path d="M18.5 18a4.5 4.5 0 0 0-.7-8.95A6 6 0 0 0 6.1 11.3 3.5 3.5 0 0 0 6.5 18Z"/></symbol>
-<symbol id="i-weather-cloud" viewBox="0 0 24 24"><path d="M6.5 19a4.5 4.5 0 0 1-.4-8.98A6 6 0 0 1 17.8 8.5 5.25 5.25 0 0 1 18 19Z"/></symbol>
-<symbol id="i-weather-rain" viewBox="0 0 24 24"><path d="M6.5 15a4.5 4.5 0 0 1-.4-8.98A6 6 0 0 1 17.8 4.5 5.25 5.25 0 0 1 18 15ZM8 18l-1 3m6-3-1 3m6-3-1 3"/></symbol>
-<symbol id="i-weather-snow" viewBox="0 0 24 24"><path d="M6.5 14a4.5 4.5 0 0 1-.4-8.98A6 6 0 0 1 17.8 3.5 5.25 5.25 0 0 1 18 14Z"/><path d="m8 17-.8 1.4m7.6-1.4.8 1.4m-4.6-1.4v2m-1.7-.3 1.7.3 1.7-.3"/></symbol>
-<symbol id="i-weather-storm" viewBox="0 0 24 24"><path d="M6.5 14a4.5 4.5 0 0 1-.4-8.98A6 6 0 0 1 17.8 3.5 5.25 5.25 0 0 1 18 14Z"/><path d="m13 14-3 5h3l-1 4 4-6h-3l1-3"/></symbol>
-<symbol id="i-weather-fog" viewBox="0 0 24 24"><path d="M6.5 12a4.5 4.5 0 0 1-.4-8.98A6 6 0 0 1 17.8 1.5 5.25 5.25 0 0 1 18 12ZM3 16h18M5 20h14"/></symbol>
-</defs></svg>
-
 <div id="status-bar" class="status-bar" hidden>
   <div id="gps" class="chip" role="status" hidden>GPS off</div>
   <div id="weather" class="chip weather-chip" role="status">
-    <svg class="i" aria-hidden="true"><use id="weather-icon" href="#i-weather-cloud"/></svg>
+    <span id="weather-icon" class="i" data-glyph="cloud" aria-hidden="true"></span>
     <span id="weather-text">Waiting for GPS</span>
   </div>
 </div>
@@ -49,17 +30,11 @@
   <div class="menu-content">
     <h1>OpenTrails</h1>
     <div class="menu-options">
-      <button id="view-map" class="btn menu-btn">View Map</button>
-      <div class="import-menu-wrap">
-        <button id="import" class="btn menu-btn" aria-controls="import-menu" aria-expanded="false"><svg class="i"><use href="#i-import"/></svg>Import Trail</button>
-        <div id="import-menu" class="import-menu" hidden>
-          <button id="upload-gpx" class="btn menu-btn">Upload GPX</button>
-          <button id="import-alltrails" class="btn menu-btn">Import AllTrails</button>
-        </div>
-      </div>
-      <button id="blank-hike" class="btn pri menu-btn"><svg class="i"><use href="#i-play"/></svg>Record Hike</button>
-      <button id="saved-open" class="btn menu-btn"><svg class="i"><use href="#i-list"/></svg>Saved hikes</button>
-      <button id="settings-open" class="btn menu-btn">Settings</button>
+      <button id="view-map" class="btn menu-btn"><span class="i" data-glyph="map" aria-hidden="true"></span>View Map</button>
+      <button id="import" class="btn menu-btn"><span class="i" data-glyph="download" aria-hidden="true"></span>Import Trail</button>
+      <button id="blank-hike" class="btn pri menu-btn"><span class="i" data-glyph="play" aria-hidden="true"></span>Record Hike</button>
+      <button id="saved-open" class="btn menu-btn"><span class="i" data-glyph="list" aria-hidden="true"></span>Saved hikes</button>
+      <button id="settings-open" class="btn menu-btn"><span class="i" data-glyph="settings" aria-hidden="true"></span>Settings</button>
     </div>
   </div>
 </main>
@@ -67,7 +42,7 @@
   <div class="menu-content">
     <h1>Saved hikes</h1>
     <ul id="items"></ul>
-    <button id="saved-back" class="btn menu-btn"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+    <button id="saved-back" class="btn menu-btn"><span class="i" data-glyph="chevron-left" aria-hidden="true"></span>Main menu</button>
   </div>
 </section>
 <section id="settings-screen" class="menu-screen" hidden>
@@ -89,7 +64,7 @@
       <legend>Weather overlay</legend>
       <div class="segments"><button id="weather-off" class="segment" aria-pressed="false">Off</button><button id="weather-on" class="segment" aria-pressed="false">On</button></div>
     </fieldset>
-    <button id="settings-back" class="btn menu-btn"><svg class="i"><use href="#i-back"/></svg>Back</button>
+    <button id="settings-back" class="btn menu-btn"><span class="i" data-glyph="chevron-left" aria-hidden="true"></span>Back</button>
   </div>
 </section>
 <main id="map" aria-label="Map" hidden></main>
@@ -98,12 +73,12 @@
   <button id="grab" aria-controls="views" aria-expanded="true" aria-label="Collapse panel"></button>
   <div id="mini" aria-hidden="true"></div>
   <div class="fabs">
-    <button id="loc" class="fab on" aria-label="Center on me and follow" aria-pressed="true"><svg class="i"><use href="#i-loc"/></svg></button>
+    <button id="loc" class="fab on" aria-label="Center on me and follow" aria-pressed="true"><span class="i" data-glyph="locate-fixed" aria-hidden="true"></span></button>
   </div>
   <div id="views">
     <div id="v-idle" class="view">
       <h2>Map</h2>
-      <button id="main-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+      <button id="main-menu-back" class="btn map-back"><span class="i" data-glyph="chevron-left" aria-hidden="true"></span>Main menu</button>
     </div>
     <div id="v-gpx" class="view" hidden>
       <h2 id="route-name"></h2>
@@ -111,18 +86,17 @@
         <div><small>Route distance</small><b id="route-distance"></b></div>
         <div><small>Max elevation gain</small><b id="route-elevation-gain"></b></div>
       </div>
-      <div class="row"><button id="start-trail" class="btn pri"><svg class="i"><use href="#i-play"/></svg>Start hike</button></div>
+      <div class="row"><button id="start-trail" class="btn pri"><span class="i" data-glyph="play" aria-hidden="true"></span>Start hike</button></div>
       <div class="route-actions">
-        <button id="save-route" class="btn">Save for later</button>
-        <button id="clear-route" class="btn danger">Clear route</button>
-        <button id="route-menu-back" class="btn map-back"><svg class="i"><use href="#i-back"/></svg>Main menu</button>
+        <button id="save-route" class="btn"><span class="i" data-glyph="bookmark" aria-hidden="true"></span>Save for later</button>
+        <button id="route-menu-back" class="btn map-back"><span class="i" data-glyph="chevron-left" aria-hidden="true"></span>Main menu</button>
       </div>
     </div>
     <div id="v-rec" class="view" hidden>
       <div id="stats" class="grid"></div>
       <div class="row">
-        <button id="pause" class="btn"><svg class="i"><use id="pi" href="#i-pause"/></svg><span id="pt">Pause</span></button>
-        <button id="stop" class="btn stop"><svg class="i"><use href="#i-stop"/></svg>Stop</button>
+        <button id="pause" class="btn"><span id="pi" class="i" data-glyph="pause" aria-hidden="true"></span><span id="pt">Pause</span></button>
+        <button id="stop" class="btn stop"><span class="i" data-glyph="square" aria-hidden="true"></span>Stop</button>
       </div>
     </div>
     <div id="v-det" class="view" hidden></div>
@@ -135,19 +109,6 @@
     <div class="row"><button class="btn" value="no">Cancel</button><button class="btn pri" value="ok">OK</button></div>
   </form>
 </dialog>
-<dialog id="alltrails-dialog">
-  <form method="dialog">
-    <h2>Import from AllTrails</h2>
-    <p>AllTrails doesn’t provide a public API for downloading GPX from a trail link. Open the trail, download its GPX if available, then return and choose Upload GPX.</p>
-    <label for="alltrails-url">AllTrails trail link</label>
-    <input id="alltrails-url" type="url" placeholder="https://www.alltrails.com/trail/..." required>
-    <div class="row">
-      <button class="btn" value="cancel">Cancel</button>
-      <button id="alltrails-open" class="btn pri" type="button">Open trail</button>
-    </div>
-  </form>
-</dialog>
-
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.3.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>

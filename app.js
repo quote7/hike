@@ -4,8 +4,16 @@ import {MAPBOX_TOKEN, MAPTILER_STYLE_URL} from './config.js';
 const $ = s => document.querySelector(s), p2 = n => String(n).padStart(2, '0');
 const esc = s => String(s).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 const RM = matchMedia('(prefers-reduced-motion:reduce)').matches;
-const TRACK = '#ff2d55';
-const RECORD_TRACK = '#1685ff';
+const GLYPH_BASE = 'https://raw.githubusercontent.com/lucide-icons/lucide/03f11e2d6adc319ea21e9a1d5820a99cd3767257/icons';
+const setGlyph = (element, name) => element.style.setProperty('--glyph', `url("${GLYPH_BASE}/${name}.svg")`);
+const applyGlyphs = root => root.querySelectorAll('[data-glyph]').forEach(element => setGlyph(element, element.dataset.glyph));
+applyGlyphs(document);
+const ROUTE_STROKE = {inner: '#a8e3b8', outline: '#176b3a'};
+const RECORD_STROKE = {inner: '#9bd0f5', outline: '#155a9c'};
+const trackLayers = (points, colors, weight = 6, opacity = .9) => [
+  L.polyline(points, {color: colors.outline, weight: weight + 3, opacity}),
+  L.polyline(points, {color: colors.inner, weight, opacity})
+];
 const theme = localStorage.theme || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
 document.documentElement.dataset.theme = theme;
 const db = await openDB('switchback', 1, {upgrade(d) { d.createObjectStore('hikes', {keyPath: 'id'}); d.createObjectStore('draft'); }});
@@ -111,33 +119,33 @@ function dot(c) {
 }
 
 /* ---------- GPS ---------- */
-let wid = null, first = true, follow = true, last = null, rec = null, line = null, wl = null, layer = null, imported = null, importedLayer = null;
+let wid = null, first = true, follow = true, last = null, rec = null, line = null, lineOutline = null, wl = null, layer = null, imported = null, importedLayer = null;
 const setFollow = f => { follow = f; $('#loc').classList.toggle('on', f); $('#loc').setAttribute('aria-pressed', f); };
 map.on('dragstart', () => setFollow(false));   // dragging the map stops following; the locate button resumes
 const chip = (t, c = '') => { const e = $('#gps'); e.textContent = t; e.className = 'chip ' + c; };
 const quality = a => chip(`GPS ${a <= 15 ? 'good' : a <= 30 ? 'fair' : 'weak'}, \u00b1${fE(a)}`, a <= 15 ? 'ok' : a <= 30 ? 'warn' : 'bad');
 let currentConditions = null, weatherLocation = null, weatherLookupAt = 0, weatherLookup = 0;
 const weatherDescriptions = code => {
-  if (code === 0) return ['Clear', '#i-weather-sun'];
-  if (code === 1 || code === 2) return ['Partly cloudy', '#i-weather-partly'];
-  if (code === 3) return ['Overcast', '#i-weather-cloud'];
-  if (code === 45 || code === 48) return ['Fog', '#i-weather-fog'];
-  if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return ['Rain', '#i-weather-rain'];
-  if (code >= 71 && code <= 77 || code === 85 || code === 86) return ['Snow', '#i-weather-snow'];
-  if (code >= 95 && code <= 99) return ['Thunderstorm', '#i-weather-storm'];
-  return ['Conditions unavailable', '#i-weather-cloud'];
+  if (code === 0) return ['Clear', 'sun'];
+  if (code === 1 || code === 2) return ['Partly cloudy', 'cloud-sun'];
+  if (code === 3) return ['Overcast', 'cloud'];
+  if (code === 45 || code === 48) return ['Fog', 'cloud-fog'];
+  if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return ['Rain', 'cloud-rain'];
+  if (code >= 71 && code <= 77 || code === 85 || code === 86) return ['Snow', 'cloud-snow'];
+  if (code >= 95 && code <= 99) return ['Thunderstorm', 'cloud-lightning'];
+  return ['Conditions unavailable', 'cloud'];
 };
 function renderLocalWeather(message = '') {
   const text = $('#weather-text'), icon = $('#weather-icon');
   if (!currentConditions) {
     text.textContent = message || 'Weather unavailable';
-    icon.setAttribute('href', '#i-weather-cloud');
+    setGlyph(icon, 'cloud');
     return;
   }
   const [condition, symbol] = weatherDescriptions(currentConditions.code);
   const temperature = Math.round(units === 'imp' ? currentConditions.temperature * 9 / 5 + 32 : currentConditions.temperature);
   text.textContent = `${temperature}°${units === 'imp' ? 'F' : 'C'} · ${condition}`;
-  icon.setAttribute('href', symbol);
+  setGlyph(icon, symbol);
 }
 async function refreshLocalWeather(latitude, longitude) {
   const point = [latitude, longitude];
@@ -247,7 +255,7 @@ function showImported() {
   const coords = imported.points.map(q => [q.lat, q.lon]);
   importedLayer?.remove();
   importedLayer = L.layerGroup([
-    ...imported.segments.map(segment => L.polyline(segment.map(q => [q.lat, q.lon]), {color: TRACK, weight: 6, opacity: .9})),
+    ...imported.segments.flatMap(segment => trackLayers(segment.map(q => [q.lat, q.lon]), ROUTE_STROKE)),
     L.circleMarker(coords[0], {radius: 8, color: '#fff', fillColor: '#2e7d32', fillOpacity: 1}),
     L.circleMarker(coords.at(-1), {radius: 8, color: '#fff', fillColor: '#b3261e', fillOpacity: 1})
   ]).addTo(map);
@@ -256,7 +264,8 @@ function showImported() {
   $('#route-elevation-gain').textContent = imported.gain == null ? '\u2013' : fE(imported.gain);
   const saved = Boolean(imported.savedId);
   $('#save-route').hidden = saved;
-  $('#route-menu-back').innerHTML = `<svg class="i"><use href="#i-back"/></svg>${saved ? 'Saved hikes' : 'Main menu'}`;
+  $('#route-menu-back').innerHTML = `<span class="i" aria-hidden="true" data-glyph="chevron-left"></span>${saved ? 'Saved hikes' : 'Main menu'}`;
+  applyGlyphs($('#route-menu-back'));
   $('#route-menu-back').onclick = saved ? openSaved : openHome;
   view('gpx');
 }
@@ -296,47 +305,7 @@ function fitImportedRoute() {
     resolve();
   }));
 }
-const importButton = $('#import'), importMenu = $('#import-menu');
-function closeImportMenu() {
-  importMenu.hidden = true;
-  importButton.setAttribute('aria-expanded', 'false');
-}
-importButton.onclick = () => {
-  importMenu.hidden = !importMenu.hidden;
-  importButton.setAttribute('aria-expanded', !importMenu.hidden);
-};
-$('#upload-gpx').onclick = () => {
-  closeImportMenu();
-  $('#gpx-file').click();
-};
-$('#import-alltrails').onclick = () => {
-  closeImportMenu();
-  $('#alltrails-dialog').showModal();
-  $('#alltrails-url').focus();
-};
-$('#alltrails-open').onclick = () => {
-  const input = $('#alltrails-url');
-  if (!input.reportValidity()) return;
-  try {
-    const url = new URL(input.value);
-    if (!['alltrails.com', 'www.alltrails.com'].includes(url.hostname) || !/^\/(?:trail|explore)\//.test(url.pathname)) {
-      throw new Error('Enter a valid AllTrails trail link.');
-    }
-    window.open(url.href, '_blank', 'noopener,noreferrer');
-    $('#alltrails-dialog').close();
-  } catch (error) {
-    toast(error.message || 'Enter a valid AllTrails trail link.');
-  }
-};
-document.addEventListener('click', event => {
-  if (!event.target.closest('.import-menu-wrap')) closeImportMenu();
-});
-document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && !importMenu.hidden) {
-    closeImportMenu();
-    importButton.focus();
-  }
-});
+$('#import').onclick = () => $('#gpx-file').click();
 $('#gpx-file').onchange = async e => {
   const file = e.target.files[0]; e.target.value = '';
   if (!file) return;
@@ -349,7 +318,6 @@ $('#gpx-file').onchange = async e => {
 };
 $('#start-trail').onclick = () => startRecording('gpx');
 $('#save-route').onclick = saveImportedRoute;
-$('#clear-route').onclick = () => { importedLayer?.remove(); importedLayer = imported = null; setFollow(false); view('idle'); };
 
 /* ---------- recording ---------- */
 const F = [['Distance', r => fD(r.dist)], ['Time', r => fT(r.elapsed / 1e3)], ['Moving time', r => fT(r.moving)], ['Pace', r => fP(r.v)],
@@ -388,6 +356,7 @@ async function openSaved() {
     ? `<span>GPX route</span><span>${fD(h.dist)}</span>`
     : `<span>${new Date(h.date).toLocaleDateString()}</span><span>${fD(h.dist)}</span><span>${fT(h.elapsed / 1e3)}</span><span>+${fE(h.gain)}</span>`}</small></span></button></li>`).join('')
     : '<li class="mute">No hikes yet. Record a hike from the main menu to see it here.</li>';
+  applyGlyphs($('#items'));
 }
 $('#main-menu-back').onclick = openHome;
 $('#route-menu-back').onclick = openHome;
@@ -435,7 +404,7 @@ $('#units-imperial').setAttribute('aria-pressed', units === 'imp');
 $('#units-nautical').setAttribute('aria-pressed', units === 'naut');
 $('#mapbox-layer').setAttribute('aria-pressed', mapProvider === 'mapbox');
 $('#osm-layer').setAttribute('aria-pressed', mapProvider === 'osm');
-const pauseUI = p => { $('#pt').textContent = p ? 'Resume' : 'Pause'; $('#pi').setAttribute('href', p ? '#i-play' : '#i-pause'); };
+const pauseUI = p => { $('#pt').textContent = p ? 'Resume' : 'Pause'; setGlyph($('#pi'), p ? 'play' : 'pause'); };
 
 /* collapsible panel: tap or swipe the handle (keyboard: Enter/Space) */
 const sheet = $('#sheet'), grab = $('#grab');
@@ -457,7 +426,7 @@ function add(q) {
     else if (Math.abs(q.ele - rec.ref) >= 3) { q.ele > rec.ref ? rec.gain += q.ele - rec.ref : rec.loss += rec.ref - q.ele; rec.ref = q.ele; }
   }
   if (dt > 0) { const v = d / dt; rec.v = rec.v ? rec.v * .6 + v * .4 : v; if (v > .3) rec.moving += Math.min(dt, 30); }
-  rec.dist += d; rec.pts.push(q); line.addLatLng([q.lat, q.lon]);
+  rec.dist += d; rec.pts.push(q); line.addLatLng([q.lat, q.lon]); lineOutline.addLatLng([q.lat, q.lon]);
   if (rec.pts.length % 5 === 0) save();
   draw();
 }
@@ -478,7 +447,10 @@ setInterval(() => {
 }, 1000);
 
 function begin() {
-  line?.remove(); line = L.polyline(rec.pts.map(q => [q.lat, q.lon]), {color: RECORD_TRACK, weight: 6, opacity: .95}).addTo(map);
+  line?.remove(); lineOutline?.remove();
+  const points = rec.pts.map(q => [q.lat, q.lon]);
+  lineOutline = L.polyline(points, {color: RECORD_STROKE.outline, weight: 9, opacity: .95}).addTo(map);
+  line = L.polyline(points, {color: RECORD_STROKE.inner, weight: 6, opacity: .95}).addTo(map);
   view('rec'); pauseUI(rec.state !== 'rec');
   if (rec.state === 'rec') lock();
   save(); draw();
@@ -496,17 +468,19 @@ $('#pause').onclick = async () => {
 };
 $('#stop').onclick = async () => { if (await ask('Finish this hike?', 'Your track will be saved on this device.', 'Finish', 'Keep going')) finish(rec); };
 async function finish(r) {
-  unlock(); $('#mini').textContent = ''; line?.remove(); line = null; rec = null; await db.delete('draft', 'cur');
+  unlock(); $('#mini').textContent = ''; line?.remove(); lineOutline?.remove(); line = lineOutline = null; rec = null; await db.delete('draft', 'cur');
   if (r.pts.length < 2) { toast('Too short to save. Nothing was recorded.'); view('idle'); return; }
   const h = {id: r.id, name: 'Hike, ' + new Date(r.startedAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}), date: r.startedAt, pts: r.pts, dist: r.dist, gain: r.gain, loss: r.loss, moving: r.moving, elapsed: r.elapsed};
   await db.put('hikes', h); toast('Hike saved'); detail(h);
 }
 
 /* ---------- saved hikes ---------- */
-function thumb(p) {
-  const k = Math.cos(p[0].lat * Math.PI / 180), xs = p.map(q => q.lon * k), ys = p.map(q => -q.lat);
-  const x0 = Math.min(...xs), y0 = Math.min(...ys), s = Math.max(Math.max(...xs) - x0, Math.max(...ys) - y0) || 1e-9;
-  return `<svg viewBox="-.06 -.06 1.12 1.12" aria-hidden="true"><polyline points="${p.map((_, i) => `${((xs[i] - x0) / s).toFixed(3)},${((ys[i] - y0) / s).toFixed(3)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width=".05" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function thumb(points) {
+  const k = Math.cos(points[0].lat * Math.PI / 180), xs = points.map(point => point.lon * k), ys = points.map(point => -point.lat);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  const span = Math.max(Math.max(...xs) - x0, Math.max(...ys) - y0) || 1e-9;
+  const coordinates = points.map((_, i) => `${((xs[i] - x0) / span).toFixed(3)},${((ys[i] - y0) / span).toFixed(3)}`).join(' ');
+  return `<svg class="route-thumb" viewBox="-.06 -.06 1.12 1.12" aria-hidden="true"><polyline class="route-outline" points="${coordinates}"/><polyline class="route-line" points="${coordinates}"/></svg>`;
 }
 $('#items').onclick = async e => {
   const b = e.target.closest('[data-id]');
@@ -530,14 +504,15 @@ $('#items').onclick = async e => {
 function detail(h) {
   layer?.remove(); view('det'); setFollow(false);
   const ll = h.pts.map(q => [q.lat, q.lon]);
-  layer = L.layerGroup([L.polyline(ll, {color: TRACK, weight: 5}),
+  layer = L.layerGroup([...trackLayers(ll, ROUTE_STROKE, 5),
     L.circleMarker(ll[0], {radius: 9, color: '#fff', fillColor: '#2e7d32', fillOpacity: 1}),
     L.circleMarker(ll.at(-1), {radius: 9, color: '#fff', fillColor: '#b3261e', fillOpacity: 1})]).addTo(map);
   map.fitBounds(ll, {paddingTopLeft: [30, 70], paddingBottomRight: [30, innerHeight * .5], animate: !RM});
   $('#v-det').innerHTML = `<label>Name<input id="nm" value="${esc(h.name)}" maxlength="80"></label>
     <div class="grid">${[['Distance', fD(h.dist)], ['Time', fT(h.elapsed / 1e3)], ['Moving time', fT(h.moving)], ['Gain / loss', `+${fE(h.gain)} / \u2212${fE(h.loss)}`]].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
     <canvas id="cv" role="img" aria-label="Elevation profile"></canvas>
-    <div class="row"><button class="btn" id="back"><svg class="i"><use href="#i-back"/></svg>Back</button><button class="btn" id="exp"><svg class="i"><use href="#i-share"/></svg>Export</button><button class="btn danger" id="del"><svg class="i"><use href="#i-trash"/></svg>Delete</button></div>`;
+    <div class="row"><button class="btn" id="back"><span class="i" data-glyph="chevron-left" aria-hidden="true"></span>Back</button><button class="btn" id="exp"><span class="i" data-glyph="share" aria-hidden="true"></span>Export</button><button class="btn danger" id="del"><span class="i" data-glyph="trash" aria-hidden="true"></span>Delete</button></div>`;
+  applyGlyphs($('#v-det'));
   profile($('#cv'), h.pts);
   $('#nm').onchange = async e => { h.name = e.target.value.trim() || h.name; await db.put('hikes', h); };
   $('#back').onclick = openSaved;
